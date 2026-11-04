@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "댓글 가드 — 유튜브 스팸 필터",
+  "version": "0.1.0",
+  "description": "Bloom Filter·LSH·Solar로 관측한 유튜브 댓글의 스팸 의심 근거를 확인하고 접습니다.",
+  "permissions": ["storage", "activeTab"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {"service_worker": "background.js"},
+  "action": {"default_popup": "popup.html", "default_title": "댓글 가드"},
+  "content_scripts": [{
+    "matches": ["https://www.youtube.com/*"],
+    "js": ["content.js"],
+    "css": ["content.css"],
+    "run_at": "document_idle"
+  }],
+  "icons": {"16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png"}
+}

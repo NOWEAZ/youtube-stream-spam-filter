@@ -1,0 +1,3 @@
+# Demonstration only. Reserved .test domains are not real threat intelligence.
+domain:phishing.test
+https://malware.test/download

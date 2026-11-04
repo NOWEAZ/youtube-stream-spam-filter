@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>댓글 가드 시연</title><link rel="stylesheet" href="/demo/demo.css"><link rel="stylesheet" href="/assets/content.css"></head>
+<body><div class="layout"><aside><div class="brand">✓ <span>댓글 가드</span></div><p class="eyebrow">BIG DATA CLASS PROJECT</p><h1>댓글을 읽기 전에,<br>의심 근거를 먼저.</h1><p class="intro">Bloom Filter와 LSH가 후보를 찾고,<br>댓글 가드가 화면에서 구분해 드립니다.</p><div class="steps"><span>01 댓글 관측</span><span>02 근거 분석</span><span>03 선택적 접기</span></div><div class="note"><strong>로컬 시연 환경</strong><p>오른쪽은 실제 유튜브가 아닌 샘플 댓글입니다. 확장 프로그램과 동일한 댓글 처리 코드를 사용합니다. .test 주소는 시연용이며 실제 악성 URL이 아닙니다.</p></div><a href="https://github.com/NOWEAZ/youtube-stream-spam-filter" target="_blank" rel="noopener">프로젝트 저장소 ↗</a></aside>
+<main><header><div><p class="eyebrow">COMMENT GUARD / DEMO</p><h2>댓글 필터 체험</h2></div><span id="serverStatus" class="status">서버 확인 중</span></header>
+<section class="connect"><label for="demoToken">서버 터미널의 연결 토큰</label><div class="connection-row"><input id="demoToken" type="password" placeholder="토큰을 붙여 넣어 주세요" autocomplete="off"><button id="connect">연결</button></div><p id="connectionMessage" role="status">토큰은 이 페이지 메모리에만 보관합니다. 새로고침하면 다시 입력해 주세요.</p></section>
+<section class="stats"><div><span>관측한 댓글</span><strong id="total">0</strong></div><div><span>스팸 의심</span><strong id="spam">0</strong></div><div><span>검토 필요</span><strong id="review">0</strong></div><div><span>근거 없음</span><strong id="safe">0</strong></div></section>
+<div class="toolbar"><div><h3>샘플 동영상의 댓글</h3><p>현재 영상에서 관측한 순서로 분석합니다.</p></div><label><input type="checkbox" id="autoHide" checked> 의심 댓글 자동 접기</label></div>
+<section id="comments" aria-label="샘플 댓글"></section>
+<div class="add-controls"><button id="add">새 댓글 불러오기</button><button id="reset">통계 초기화 후 다시 분석</button></div>
+<form id="custom"><label for="customText">직접 댓글을 입력해 확인해 보세요</label><textarea id="customText" maxlength="2000" required placeholder="예: 영상 잘 봤습니다. 다음 편도 기대됩니다."></textarea><button type="submit">댓글 분석하기</button></form>
+<footer><span id="streamStats">DGIM·FM 통계가 여기에 표시됩니다.</span><p>표시된 의심 판정은 확정적인 악성 여부를 뜻하지 않습니다. ‘원문 보기’로 내용을 확인할 수 있습니다.</p></footer></main></div><script src="/demo/demo.js"></script><script src="/assets/content.js"></script></body></html>

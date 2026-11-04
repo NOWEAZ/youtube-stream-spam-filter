@@ -1,0 +1,13 @@
+.ycg-bar {
+  display: flex !important; flex-wrap: wrap; align-items: center; gap: 7px;
+  margin: 6px 0 8px !important; padding: 9px 11px !important; border: 1px solid #d9ad58;
+  border-radius: 9px; background: #fff8e9; color: #503b14; font: 12px/1.5 system-ui, sans-serif !important;
+}
+.ycg-bar[data-verdict="review"] { background: #f5f2ff; color: #493674; border-color: #c7b6ec; }
+.ycg-bar strong { font-weight: 700; white-space: nowrap; }
+.ycg-bar .ycg-reason { flex: 1 1 200px; }
+.ycg-bar button { appearance: none; background: transparent; color: inherit; border: 1px solid currentColor;
+  border-radius: 6px; padding: 4px 8px; cursor: pointer; font: inherit; white-space: nowrap; }
+.ycg-bar button:hover { background: #0000000a; }
+.ycg-bar button:focus-visible { outline: 3px solid #128668; outline-offset: 2px; }
+.ycg-text-hidden { display: none !important; }

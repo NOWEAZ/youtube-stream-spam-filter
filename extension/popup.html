@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="ko">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>댓글 가드</title><link rel="stylesheet" href="popup.css"></head>
+<body>
+  <header><div class="brand"><span class="mark">✓</span><div><h1>댓글 가드</h1><p>YOUTUBE COMMENT GUARD</p></div></div><span id="connection" class="pill">확인 중</span></header>
+  <main>
+    <section class="hero"><span class="eyebrow">현재 영상에서 관측한 댓글</span><div class="headline"><strong id="total">0</strong><span>개 분석</span></div>
+      <div id="status" role="status">유튜브 일반 동영상을 열어 주세요.</div></section>
+    <section class="metrics" aria-label="판별 결과"><div><strong id="spam">0</strong><span>스팸 의심</span></div><div><strong id="review">0</strong><span>검토 필요</span></div><div><strong id="safe">0</strong><span>근거 없음</span></div></section>
+    <section class="activity"><div class="section-title"><h2>최근 관측 흐름</h2><span>최대 60개</span></div><div id="history" class="history" aria-label="최근 댓글의 판정 흐름"></div><div class="legend"><span><i></i>스팸 의심</span><span><i></i>그 외</span></div>
+      <dl><div><dt>최근 <span id="window">0</span>개 중 의심 댓글 추정</dt><dd id="estimate">0개</dd></div><div><dt>고유 스팸 URL 추정</dt><dd id="urls">0개</dd></div><div><dt>고유 스팸 계정 추정</dt><dd id="accounts">관측 없음</dd></div><div><dt>Solar 호출</dt><dd id="calls">0회</dd></div></dl>
+      <p class="muted">DGIM·FM 근사치입니다. 게시 시간순 통계가 아니며, 정상 표시 해제는 판정 통계를 바꾸지 않습니다.</p>
+    </section>
+    <section class="controls"><label class="toggle-row"><span>댓글 필터 사용</span><input type="checkbox" id="enabled" role="switch"></label><label class="toggle-row"><span>스팸 의심 댓글 자동 접기</span><input type="checkbox" id="autoHide" role="switch"></label><label class="toggle-row"><span>Solar 추가 검토</span><input type="checkbox" id="allowSolar" role="switch"></label><p class="muted">Solar를 켜면 후보 댓글과 관련 근거 일부가 Upstage로 전송됩니다. 서버 API 키가 필요하며, 변경 시 현재 통계가 초기화됩니다.</p></section>
+    <details id="settings"><summary>서버 연결 설정</summary><label for="port">로컬 서버 포트</label><input id="port" type="number" min="1024" max="65535" value="8765"><label for="token">연결 토큰</label><input id="token" type="password" autocomplete="off" placeholder="서버 터미널에 표시된 토큰"><button id="save" class="primary">설정 저장 및 연결 확인</button><p id="settingsMessage" role="status"></p><p id="coverage" class="muted"></p></details>
+    <div class="actions"><button id="rescan">현재 영상 다시 분석</button><button id="demo">시연 화면 열기 ↗</button></div>
+    <p class="footnote">이 브라우저 화면에서만 댓글을 접습니다. 삭제·신고하지 않습니다.</p>
+  </main><script src="popup.js"></script>
+</body></html>
