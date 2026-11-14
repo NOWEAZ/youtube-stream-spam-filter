@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "YouTube Stream Spam Filter",
+  "version": "0.1.0",
+  "description": "Real-time YouTube comment spam filter powered by Bloom Filters, MinHash/LSH, DGIM, and Flajolet-Martin sketches.",
+  "permissions": [
+    "storage",
+    "activeTab"
+  ],
+  "host_permissions": [
+    "http://127.0.0.1:8000/*",
+    "https://www.youtube.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "YouTube Stream Spam Filter",
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*"
+      ],
+      "css": [
+        "styles.css"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ]
+}

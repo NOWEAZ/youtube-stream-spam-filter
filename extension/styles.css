@@ -1,0 +1,82 @@
+/* YouTube Stream Spam Filter - Content Styles */
+
+.yt-spam-filter-bar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-family: "Roboto", "Noto Sans KR", Arial, sans-serif;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.yt-spam-filter-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: -0.2px;
+}
+
+.yt-spam-filter-badge--malicious {
+  background-color: rgba(217, 48, 37, 0.16);
+  color: #ff6b6b;
+  border: 1px solid rgba(217, 48, 37, 0.45);
+}
+
+.yt-spam-filter-badge--spam {
+  background-color: rgba(242, 153, 0, 0.16);
+  color: #fbbc04;
+  border: 1px solid rgba(242, 153, 0, 0.45);
+}
+
+.yt-spam-filter-badge--hold {
+  background-color: rgba(138, 180, 248, 0.14);
+  color: #8ab4f8;
+  border: 1px solid rgba(138, 180, 248, 0.4);
+}
+
+.yt-spam-filter-badge--offline {
+  background-color: rgba(154, 160, 166, 0.16);
+  color: #9aa0a6;
+  border: 1px solid rgba(154, 160, 166, 0.4);
+}
+
+.yt-spam-filter-reason {
+  color: #9aa0a6;
+  font-size: 11px;
+}
+
+.yt-spam-filter-toggle-btn {
+  background: transparent;
+  border: 1px solid rgba(154, 160, 166, 0.45);
+  color: #e8eaed;
+  border-radius: 10px;
+  padding: 1px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.yt-spam-filter-toggle-btn:hover {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.yt-spam-filter-folded {
+  filter: blur(5px);
+  max-height: 22px;
+  overflow: hidden;
+  opacity: 0.45;
+  user-select: none;
+  transition: filter 0.2s ease, max-height 0.2s ease, opacity 0.2s ease;
+}
+
+.yt-spam-filter-unfolded {
+  filter: none !important;
+  max-height: none !important;
+  opacity: 1 !important;
+  user-select: text !important;
+}

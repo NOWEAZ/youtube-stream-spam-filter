@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <title>YouTube Stream Spam Filter</title>
+  <style>
+    :root {
+      --bg: #18191c;
+      --card: #232529;
+      --text: #e8eaed;
+      --muted: #9aa0a6;
+      --accent: #8ab4f8;
+      --danger: #ff6b6b;
+      --warn: #fbbc04;
+      --ok: #81c995;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      width: 340px;
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: "Roboto", "Noto Sans KR", Arial, sans-serif;
+      font-size: 13px;
+      padding: 14px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .title {
+      font-size: 15px;
+      font-weight: 700;
+    }
+    .status-pill {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 12px;
+      background: rgba(154, 160, 166, 0.2);
+      color: var(--muted);
+    }
+    .status-pill.online {
+      background: rgba(129, 201, 149, 0.18);
+      color: var(--ok);
+    }
+    .status-pill.offline {
+      background: rgba(255, 107, 107, 0.18);
+      color: var(--danger);
+    }
+    .notice {
+      font-size: 11px;
+      color: var(--muted);
+      background: var(--card);
+      padding: 7px 9px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      line-height: 1.4;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .card {
+      background: var(--card);
+      border-radius: 8px;
+      padding: 9px 10px;
+    }
+    .card-label {
+      font-size: 11px;
+      color: var(--muted);
+      margin-bottom: 4px;
+    }
+    .card-value {
+      font-size: 17px;
+      font-weight: 700;
+    }
+    .card-value.danger { color: var(--danger); }
+    .card-value.warn { color: var(--warn); }
+    .card-value.accent { color: var(--accent); }
+    .section-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--muted);
+      margin: 8px 0 6px;
+    }
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .btn {
+      background: var(--card);
+      color: var(--text);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      border-radius: 6px;
+      padding: 5px 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.08);
+    }
+    label.toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">YouTube Spam Filter</div>
+    <div id="server-status" class="status-pill">확인 중...</div>
+  </div>
+
+  <div class="notice" id="diag-banner">
+    ℹ️ 아래 수치는 <strong>현재 영상의 관측 스트림 기준 통계</strong>(스크롤 DOM 로딩 순서)이며, 실제 작성 시각 순 빈도와 다를 수 있습니다.
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">관측 댓글 수</div>
+      <div id="stat-observed" class="card-value">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">스팸 의심 (SPAM)</div>
+      <div id="stat-suspect" class="card-value danger">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">판단 보류 (HOLD)</div>
+      <div id="stat-hold" class="card-value warn">0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">DGIM 최근 윈도우 추정</div>
+      <div id="stat-dgim" class="card-value accent">0.0</div>
+    </div>
+  </div>
+
+  <div class="section-title">Flajolet-Martin 고유 추정 & 지연 시간</div>
+  <div class="grid">
+    <div class="card">
+      <div class="card-label">FM 고유 의심 URL 수</div>
+      <div id="stat-fm-urls" class="card-value">0.0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">FM 고유 의심 계정 수</div>
+      <div id="stat-fm-accounts" class="card-value">0.0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">E2E 지연 p50 (ms)</div>
+      <div id="stat-p50" class="card-value">0.0</div>
+    </div>
+    <div class="card">
+      <div class="card-label">E2E 지연 p95 (ms)</div>
+      <div id="stat-p95" class="card-value">0.0</div>
+    </div>
+  </div>
+
+  <div class="controls">
+    <label class="toggle">
+      <input type="checkbox" id="toggle-filter" checked />
+      실시간 마스킹 활성
+    </label>
+    <button id="btn-reset" class="btn" type="button">스트림 초기화</button>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>
