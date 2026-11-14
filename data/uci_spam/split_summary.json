@@ -1,0 +1,24 @@
+{
+  "seed": 42,
+  "source": "Synthetic Stream (sample_stream.json)",
+  "total_comments": 40,
+  "total_clusters": 34,
+  "multi_comment_near_duplicate_clusters": 4,
+  "splits": {
+    "reference": {
+      "count": 6,
+      "spam_count": 6,
+      "path": "data\\uci_spam\\split_reference.json"
+    },
+    "validation": {
+      "count": 17,
+      "spam_count": 7,
+      "path": "data\\uci_spam\\split_validation.json"
+    },
+    "test": {
+      "count": 17,
+      "spam_count": 6,
+      "path": "data\\uci_spam\\split_test.json"
+    }
+  }
+}
