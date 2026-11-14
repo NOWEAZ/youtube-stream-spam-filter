@@ -1,0 +1,12 @@
+{
+  "name": "comment-shield",
+  "version": "0.1.0",
+  "private": true,
+  "description": "유튜브 스팸 댓글 차단 크롬 확장 (서버 없는 단독 실행)",
+  "scripts": {
+    "test": "node --test tests/core.test.js",
+    "e2e": "xvfb-run -a node tests/e2e.js && xvfb-run -a node tests/e2e_extra.js",
+    "eval": "node --expose-gc tools/evaluate.js --csv data/sample_labeled.csv",
+    "icons": "node tools/make_icons.js"
+  }
+}

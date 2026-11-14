@@ -1,0 +1,29 @@
+:root { --bg: #ffffff; --fg: #1f2328; --muted: #59636e; --line: #d1d9e0; --accent: #1a56db; --spam: #b42318; --review: #b45309; --chip: #f3f5f7; }
+@media (prefers-color-scheme: dark) { :root { --bg: #16181c; --fg: #e8eaed; --muted: #a0a7b0; --line: #333840; --accent: #7aa7ff; --spam: #ff8a80; --review: #fbbf24; --chip: #22262c; } }
+* { box-sizing: border-box; }
+body { margin: 0; width: 340px; padding: 14px 16px 16px; background: var(--bg); color: var(--fg); font: 14px/1.45 "Noto Sans KR", system-ui, sans-serif; }
+header { display: flex; justify-content: space-between; align-items: center; }
+h1 { margin: 0; font-size: 17px; }
+.switch, .row { display: flex; align-items: center; gap: 8px; }
+.row { margin: 8px 0; justify-content: space-between; }
+.row input[type=checkbox], .switch input { width: 16px; height: 16px; }
+.status { margin: 8px 0 12px; color: var(--muted); font-size: 13px; min-height: 1.4em; }
+.counts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.counts div { background: var(--chip); border-radius: 8px; padding: 8px 4px; text-align: center; }
+.counts b { display: block; font-size: 20px; }
+.counts span { font-size: 11px; color: var(--muted); }
+.counts .spam b { color: var(--spam); } .counts .review b { color: var(--review); }
+.history { display: flex; align-items: flex-end; gap: 1px; height: 28px; margin: 10px 0; }
+.history i { flex: 1; min-width: 2px; height: 5px; background: var(--line); border-radius: 1px; }
+.history i.r { height: 14px; background: var(--review); } .history i.s { height: 26px; background: var(--spam); }
+.est { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; margin: 8px 0 4px; font-size: 13px; }
+.est dt { color: var(--muted); } .est dd { margin: 0; font-variant-numeric: tabular-nums; text-align: right; }
+.note { margin: 6px 0; font-size: 12px; color: var(--muted); }
+section { border-top: 1px solid var(--line); padding-top: 8px; margin-top: 10px; }
+select, input[type=password] { background: var(--chip); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 7px; font: inherit; }
+.col { display: grid; gap: 4px; font-size: 12px; } .col input { width: 100%; }
+details summary { cursor: pointer; font-size: 13px; padding: 4px 0; }
+footer { display: flex; gap: 8px; margin-top: 12px; }
+footer button { flex: 1; padding: 7px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--chip); color: var(--fg); font: inherit; font-size: 12px; cursor: pointer; }
+footer button:hover { border-color: var(--accent); }
+button:focus-visible, select:focus-visible, input:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

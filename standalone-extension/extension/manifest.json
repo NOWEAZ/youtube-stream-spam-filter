@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "댓글 방패 — 유튜브 스팸 댓글 필터",
+  "version": "0.1.0",
+  "description": "유튜브 댓글의 스팸 의심 근거를 보여 주고 접어 줍니다. 분석은 모두 내 브라우저 안에서 이루어집니다.",
+  "permissions": ["storage"],
+  "optional_host_permissions": ["https://api.upstage.ai/*"],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "댓글 방패" },
+  "content_scripts": [{
+    "matches": ["https://www.youtube.com/*"],
+    "js": ["core.js", "content.js"],
+    "css": ["content.css"],
+    "run_at": "document_idle"
+  }],
+  "icons": { "16": "icons/icon16.png", "48": "icons/icon48.png", "128": "icons/icon128.png" }
+}

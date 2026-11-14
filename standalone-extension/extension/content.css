@@ -1,0 +1,19 @@
+.cg-bar {
+  --cg-bg: #fff4e5; --cg-fg: #4a2c00; --cg-border: #f0b35a; --cg-accent: #b45309; --cg-btn-bg: #ffffff;
+  display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px;
+  margin: 0 0 8px; padding: 6px 10px; border: 1px solid var(--cg-border); border-radius: 8px;
+  background: var(--cg-bg); color: var(--cg-fg); font: 13px/1.4 "Roboto", "Noto Sans KR", sans-serif;
+}
+.cg-bar[data-verdict="spam"] { --cg-bg: #fdecec; --cg-fg: #5c1111; --cg-border: #e48a8a; --cg-accent: #b42318; }
+html[dark] .cg-bar { --cg-bg: #3a2a12; --cg-fg: #fde8c8; --cg-border: #8a5a1c; --cg-accent: #fbbf24; --cg-btn-bg: #2a1d0b; }
+html[dark] .cg-bar[data-verdict="spam"] { --cg-bg: #3b1818; --cg-fg: #fbdcdc; --cg-border: #8f3b3b; --cg-accent: #ff8a80; }
+.cg-badge { color: var(--cg-accent); font-weight: 700; white-space: nowrap; }
+.cg-reason { flex: 1 1 200px; min-width: 0; }
+.cg-actions { display: inline-flex; gap: 6px; }
+.cg-bar button {
+  cursor: pointer; padding: 3px 9px; border-radius: 6px; border: 1px solid var(--cg-border);
+  background: var(--cg-btn-bg); color: inherit; font: inherit; font-size: 12px;
+}
+.cg-bar button:hover { border-color: var(--cg-accent); }
+.cg-bar button:focus-visible { outline: 2px solid var(--cg-accent); outline-offset: 1px; }
+.cg-text-hidden { display: none !important; }

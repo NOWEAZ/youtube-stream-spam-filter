@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>댓글 방패</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <header>
+    <h1>댓글 방패</h1>
+    <label class="switch"><input type="checkbox" id="enabled"><span>사용</span></label>
+  </header>
+  <p id="status" class="status" role="status">확인하는 중…</p>
+
+  <section aria-label="이 영상의 분석 결과">
+    <div class="counts">
+      <div><b id="total">0</b><span>분석</span></div>
+      <div class="spam"><b id="spam">0</b><span>스팸 의심</span></div>
+      <div class="review"><b id="review">0</b><span>검토 필요</span></div>
+      <div><b id="safe">0</b><span>근거 없음</span></div>
+    </div>
+    <div id="history" class="history" aria-label="최근 60개 댓글의 판정 흐름"></div>
+    <dl class="est">
+      <dt>최근 <span id="windowSize">0</span>개 중 스팸 의심 (DGIM)</dt><dd id="dgim">–</dd>
+      <dt>스팸 속 서로 다른 URL (FM)</dt><dd id="fmUrls">–</dd>
+      <dt>스팸 계정 수 (FM)</dt><dd id="fmAccounts">–</dd>
+      <dt>유사 댓글 비교 횟수 (LSH)</dt><dd id="lsh">–</dd>
+      <dt>악성 URL 목록</dt><dd id="blocklist">–</dd>
+    </dl>
+    <p class="note">추정치 옆 괄호는 정확히 센 값입니다. 알고리즘 오차를 눈으로 확인하려는 용도입니다.</p>
+  </section>
+
+  <section aria-label="설정">
+    <label class="row"><input type="checkbox" id="autoHide"><span>스팸 의심 댓글 자동으로 접기</span></label>
+    <label class="row"><span>민감도</span>
+      <select id="sensitivity">
+        <option value="strict">엄격 (더 많이 표시)</option>
+        <option value="normal">보통</option>
+        <option value="lenient">느슨 (확실한 것만)</option>
+      </select>
+    </label>
+    <details id="aiBox">
+      <summary>AI 추가 검토 (선택)</summary>
+      <p class="note">켜면 ‘검토 필요’ 댓글의 본문과 링크가 Upstage Solar 서버로 전송됩니다. 작성자 정보는 보내지 않습니다. 기본값은 꺼짐입니다.</p>
+      <label class="row"><input type="checkbox" id="ai"><span>AI 추가 검토 사용</span></label>
+      <label class="col"><span>Upstage API 키 (이 브라우저에만 저장)</span>
+        <input type="password" id="aiKey" autocomplete="off" spellcheck="false"></label>
+      <p id="aiMessage" class="note" role="status"></p>
+    </details>
+  </section>
+
+  <footer>
+    <button id="rescan" type="button">다시 분석</button>
+    <button id="clearLearned" type="button">내가 표시한 기록 지우기 (<span id="learned">0</span>)</button>
+  </footer>
+  <script src="popup.js"></script>
+</body>
+</html>
