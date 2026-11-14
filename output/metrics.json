@@ -1,0 +1,100 @@
+{
+  "seed": 42,
+  "bloom_filter": {
+    "script": "benchmarks/run_benchmarks.py::benchmark_bloom_filter",
+    "num_indexed_urls": 10000,
+    "python_set_memory_kb": 1428.01,
+    "bloom_1pct_memory_kb": 11.7,
+    "memory_reduction_pct": 99.18,
+    "python_set_2000_queries_ms": 0.261,
+    "two_stage_p50_latency_ms": 0.0124,
+    "two_stage_p95_latency_ms": 0.0205,
+    "two_stage_final_fpr": 0.0,
+    "url_lookup_fpr_curve": [
+      {
+        "target_fpr": 0.005,
+        "theoretical_fpr": 0.00502,
+        "empirical_fpr": 0.0056,
+        "memory_kb": 13.46,
+        "num_hashes": 8
+      },
+      {
+        "target_fpr": 0.01,
+        "theoretical_fpr": 0.01004,
+        "empirical_fpr": 0.012,
+        "memory_kb": 11.7,
+        "num_hashes": 7
+      },
+      {
+        "target_fpr": 0.02,
+        "theoretical_fpr": 0.02009,
+        "empirical_fpr": 0.0206,
+        "memory_kb": 9.94,
+        "num_hashes": 6
+      },
+      {
+        "target_fpr": 0.05,
+        "theoretical_fpr": 0.05027,
+        "empirical_fpr": 0.0489,
+        "memory_kb": 7.61,
+        "num_hashes": 4
+      },
+      {
+        "target_fpr": 0.1,
+        "theoretical_fpr": 0.10071,
+        "empirical_fpr": 0.0994,
+        "memory_kb": 5.85,
+        "num_hashes": 3
+      }
+    ]
+  },
+  "lsh_detector": {
+    "script": "benchmarks/run_benchmarks.py::benchmark_lsh_vs_all_pairs",
+    "num_comments": 240,
+    "total_all_pairs": 28680,
+    "lsh_candidate_pairs": 3738,
+    "candidate_reduction_ratio_pct": 86.97,
+    "ground_truth_similar_pairs": 3951,
+    "lsh_recalled_similar_pairs": 3738,
+    "lsh_recall": 0.9461,
+    "all_pairs_time_ms": 80.68,
+    "lsh_time_ms": 480.3
+  },
+  "pipeline_classification": {
+    "script": "benchmarks/run_benchmarks.py::benchmark_pipeline_classification",
+    "dataset": "data/synthetic_stream/sample_stream.json",
+    "label_column": "label",
+    "total_comments": 40,
+    "true_positive": 19,
+    "false_positive": 0,
+    "true_negative": 21,
+    "false_negative": 0,
+    "hold_count": 1,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1_score": 1.0,
+    "comment_classification_fpr": 0.0,
+    "hold_rate": 0.025,
+    "pipeline_p50_latency_ms": 1.916,
+    "pipeline_p95_latency_ms": 3.858
+  },
+  "stream_sketches": {
+    "script": "benchmarks/run_benchmarks.py::benchmark_sketches",
+    "dgim": {
+      "window_size": 1000,
+      "mean_relative_error_pct": 10.29,
+      "max_relative_error_pct": 22.88,
+      "theoretical_bound_pct": 50.0,
+      "dgim_bucket_count": 12,
+      "dgim_memory_bytes": 376,
+      "exact_window_memory_bytes": 37208
+    },
+    "flajolet_martin": {
+      "true_distinct_count": 172,
+      "estimated_distinct_count": 198.14,
+      "relative_error_pct": 15.2,
+      "fm_sketch_memory_bytes": 512,
+      "exact_set_memory_bytes": 20000
+    }
+  }
+}
