@@ -2,7 +2,7 @@
   "use strict";
   if (globalThis.__commentGuardLoaded) return;
   globalThis.__commentGuardLoaded = true;
-  const defaults = { enabled: true, autoHide: true, allowSolar: false };
+  const defaults = { enabled: true, autoHide: true, allowGLM: false };
   let config = { ...defaults }, video = "", session = "", generation = 0;
   let nodeState = new WeakMap(), results = new Map(), pending = new Map();
   let originals = new Set(), normal = new Set();
@@ -176,7 +176,7 @@
     for (const key of Object.keys(defaults)) {
       if (changes[key]) { config[key] = changes[key].newValue ?? defaults[key]; redraw = true; }
     }
-    restart = Boolean(changes.allowSolar || changes.token || changes.port);
+    restart = Boolean(changes.allowGLM || changes.token || changes.port);
     if (restart) reset();
     else if (redraw) {
       clearDecorations(); nodeState = new WeakMap();

@@ -11,7 +11,7 @@ from backend.algorithms import BloomFilter, DGIM, FlajoletMartin, MinHashLSH, no
 from backend.blocklist import Blocklist
 from backend.engine import Engine
 from backend.server import handler_factory, validate
-from backend.solar import SolarAgent
+from backend.glm import GLMAgent
 
 
 class AlgorithmsTest(unittest.TestCase):
@@ -113,7 +113,7 @@ class EngineTest(unittest.TestCase):
         result = self.analyze('투자 수익인증 프로필 링크 텔레그램 문의하세요', '2')
         self.assertEqual(result['results'][0]['verdict'], 'spam')
 
-    def test_solar_executes_only_allowlisted_tools(self):
+    def test_glm_executes_only_allowlisted_tools(self):
         calls = []
         def transport(body, timeout):
             calls.append(body)
@@ -121,15 +121,17 @@ class EngineTest(unittest.TestCase):
                 return {'choices': [{'message': {'content': None, 'tool_calls': [
                     {'id': 'call1', 'type': 'function', 'function': {'name': 'find_similar_comments', 'arguments': '{}'}}]}}]}
             return {'choices': [{'message': {'content': json.dumps({'verdict': 'review', 'reason': '근거가 부족합니다.'})}}]}
-        agent = SolarAgent(True, transport)
+        agent = GLMAgent(True, transport)
         result, trace = agent.review('예시', [], [], [])
         self.assertEqual(result['verdict'], 'review')
         self.assertEqual(trace['calls'], 2)
         self.assertEqual(calls[1]['messages'][-1]['role'], 'tool')
-        self.assertEqual(calls[1]['tool_choice'], 'none')
-        bad = SolarAgent(True, lambda *_: {'choices': [{'message': {'content': '{"verdict":"spam","reason":"추측"}'}}]})
+        self.assertEqual(calls[0]['tool_choice'], 'auto')
+        self.assertNotIn('tool_choice', calls[1])
+        self.assertNotIn('tools', calls[1])
+        bad = GLMAgent(True, lambda *_: {'choices': [{'message': {'content': '{"verdict":"spam","reason":"추측"}'}}]})
         self.assertIsNone(bad.review('예시', [], [], [])[0])
-        outage = SolarAgent(True, lambda *_: (_ for _ in ()).throw(TimeoutError()))
+        outage = GLMAgent(True, lambda *_: (_ for _ in ()).throw(TimeoutError()))
         self.assertEqual(outage.review('예시', [], [], [])[1]['status'], 'unavailable')
 
     def test_validation_rejects_oversized_batches(self):

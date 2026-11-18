@@ -7,7 +7,7 @@ const vm = require('node:vm');
 function worker(overrides = {}, response = { ok: true }) {
   let listener;
   const requests = [];
-  const config = { enabled: true, token: 'test-pairing-token-1234567890', port: 8765, allowSolar: false, ...overrides };
+  const config = { enabled: true, token: 'test-pairing-token-1234567890', port: 8765, allowGLM: false, ...overrides };
   const chrome = {
     storage: { local: { get: async () => config } },
     runtime: { id: 'a'.repeat(32), getURL: x => `chrome-extension://${'a'.repeat(32)}/${x}`,
@@ -27,15 +27,25 @@ const contentSender = { id: 'a'.repeat(32), tab: { id: 1 }, url: 'https://www.yo
 const popupSender = { id: 'a'.repeat(32), url: `chrome-extension://${'a'.repeat(32)}/popup.html` };
 const message = { type: 'ANALYZE', session: 'test', comments: [{ id: '1', text: 'hello' }], url: 'https://evil.test' };
 
-test('worker uses loopback only and overrides untrusted Solar flags', async () => {
+test('worker uses loopback only and overrides untrusted GLM flags', async () => {
   const instance = worker();
-  const result = await instance.invoke({ ...message, allow_solar: true }, contentSender);
+  const result = await instance.invoke({ ...message, allow_glm: true }, contentSender);
   assert.equal(result.ok, true);
   assert.equal(instance.requests[0].url, 'http://127.0.0.1:8765/api/analyze');
   const body = JSON.parse(instance.requests[0].options.body);
-  assert.equal(body.allow_solar, false);
+  assert.equal(body.allow_glm, false);
   assert.equal(body.url, undefined);
   assert.equal(instance.requests[0].options.headers['X-YCSF-Token'], 'test-pairing-token-1234567890');
+});
+test('GLM opt-in is sent only when the new local preference is enabled', async () => {
+  const instance = worker({ allowGLM: true });
+  await instance.invoke(message, contentSender);
+  assert.equal(JSON.parse(instance.requests[0].options.body).allow_glm, true);
+});
+test('previous provider preference does not enable GLM consent', async () => {
+  const instance = worker({ allowSolar: true });
+  await instance.invoke(message, contentSender);
+  assert.equal(JSON.parse(instance.requests[0].options.body).allow_glm, false);
 });
 test('worker refuses other sites, non-watch pages and other extensions', async () => {
   const instance = worker();

@@ -1,4 +1,4 @@
-"""Bounded Solar tool-calling agent. Only called with server AND per-request opt-in."""
+"""Bounded GLM tool-calling agent. Only called with server AND per-request opt-in."""
 import json
 import os
 import time
@@ -19,15 +19,15 @@ def schema(name, description):
         'parameters': {'type': 'object', 'properties': {}, 'additionalProperties': False}}}
 
 
-class SolarAgent:
+class GLMAgent:
     def __init__(self, enabled=False, transport=None):
-        self.key = os.environ.get('UPSTAGE_API_KEY', '')
+        self.key = os.environ.get('ZAI_API_KEY', '')
         self.enabled = bool(enabled and (self.key or transport))
-        self.model = os.environ.get('SOLAR_MODEL', 'solar-pro4')
+        self.model = os.environ.get('GLM_MODEL', 'glm-4.7')
         self.transport = transport or self._request
 
     def _request(self, body, timeout):
-        request = urllib.request.Request('https://api.upstage.ai/v1/chat/completions',
+        request = urllib.request.Request('https://api.z.ai/api/paas/v4/chat/completions',
             data=json.dumps(body).encode(), method='POST',
             headers={'Authorization': 'Bearer ' + self.key, 'Content-Type': 'application/json'})
         with urllib.request.urlopen(request, timeout=timeout) as response:
@@ -47,17 +47,29 @@ class SolarAgent:
                 remaining = deadline - time.monotonic()
                 if remaining <= 0:
                     raise TimeoutError()
-                body = {'model': self.model, 'messages': messages, 'max_tokens': 450,
-                        'tools': tools, 'tool_choice': 'auto' if turn == 0 else 'none'}
+                body = {'model': self.model, 'messages': messages, 'max_tokens': 1024}
+                # Z.ai documents only auto. Omit tool definitions for the final answer.
+                if turn == 0:
+                    body.update(tools=tools, tool_choice='auto')
+                # The default model can turn thinking off for this short, bounded task.
+                # Do not send this setting to models that require thinking (e.g. GLM-5.3).
+                if self.model.casefold() == 'glm-4.7':
+                    body['thinking'] = {'type': 'disabled'}
                 calls += 1
                 payload = self.transport(body, max(0.1, remaining))
-                msg = payload['choices'][0]['message']
+                choice = payload['choices'][0]
+                if choice.get('finish_reason') not in (None, 'stop', 'tool_calls'):
+                    raise ValueError('incomplete response')
+                msg = choice['message']
                 tool_calls = msg.get('tool_calls') or []
                 if tool_calls:
                     if turn or len(tool_calls) > 2:
                         raise ValueError('tool budget exceeded')
                     # Preserve API tool IDs; only execute the two allowlisted local read tools.
-                    messages.append({'role': 'assistant', 'content': msg.get('content'), 'tool_calls': tool_calls})
+                    assistant = {'role': 'assistant', 'content': msg.get('content'), 'tool_calls': tool_calls}
+                    if isinstance(msg.get('reasoning_content'), str):
+                        assistant['reasoning_content'] = msg['reasoning_content']
+                    messages.append(assistant)
                     for tool in tool_calls:
                         name = tool['function']['name']
                         if name == 'lookup_current_urls':

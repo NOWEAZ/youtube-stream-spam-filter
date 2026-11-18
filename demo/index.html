@@ -5,6 +5,7 @@
 <section class="connect"><label for="demoToken">서버 터미널의 연결 토큰</label><div class="connection-row"><input id="demoToken" type="password" placeholder="토큰을 붙여 넣어 주세요" autocomplete="off"><button id="connect">연결</button></div><p id="connectionMessage" role="status">토큰은 이 페이지 메모리에만 보관합니다. 새로고침하면 다시 입력해 주세요.</p></section>
 <section class="stats"><div><span>관측한 댓글</span><strong id="total">0</strong></div><div><span>스팸 의심</span><strong id="spam">0</strong></div><div><span>검토 필요</span><strong id="review">0</strong></div><div><span>근거 없음</span><strong id="safe">0</strong></div></section>
 <div class="toolbar"><div><h3>샘플 동영상의 댓글</h3><p>현재 영상에서 관측한 순서로 분석합니다.</p></div><label><input type="checkbox" id="autoHide" checked> 의심 댓글 자동 접기</label></div>
+<section class="connect"><label><input type="checkbox" id="allowGLM"> GLM 추가 검토 사용</label><p>켜면 검토 후보 댓글과 근거 일부가 Z.ai로 전송됩니다. ZAI_API_KEY를 설정하고 서버를 --glm으로 실행해야 합니다. 변경 시 분석 통계가 초기화됩니다.</p></section>
 <section id="comments" aria-label="샘플 댓글"></section>
 <div class="add-controls"><button id="add">새 댓글 불러오기</button><button id="reset">통계 초기화 후 다시 분석</button></div>
 <form id="custom"><label for="customText">직접 댓글을 입력해 확인해 보세요</label><textarea id="customText" maxlength="2000" required placeholder="예: 영상 잘 봤습니다. 다음 편도 기대됩니다."></textarea><button type="submit">댓글 분석하기</button></form>

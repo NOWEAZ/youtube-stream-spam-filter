@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 let activeTab;
-const DEFAULTS = { enabled: true, autoHide: true, allowSolar: false, port: 8765, token: "" };
+const DEFAULTS = { enabled: true, autoHide: true, allowGLM: false, port: 8765, token: "" };
 
 async function health() {
   const response = await chrome.runtime.sendMessage({ type: "HEALTH" });
@@ -8,7 +8,7 @@ async function health() {
   $("connection").className = `pill ${response?.ok ? "online" : "offline"}`;
   if (response?.ok) {
     const data = response.data;
-    $("coverage").textContent = `${data.demo_data ? "시연 목록 · " : ""}악성 URL 목록 ${data.blocklist_count.toLocaleString()}건 · Solar ${data.solar_available ? "사용 가능" : "미설정"}` +
+    $("coverage").textContent = `${data.demo_data ? "시연 목록 · " : ""}악성 URL 목록 ${data.blocklist_count.toLocaleString()}건 · GLM ${data.glm_available ? "사용 가능" : "미설정"}` +
       (data.demo_data ? ". 시연 목록은 실제 위협을 탐지하지 않습니다." : !data.blocklist_count ? ". 악성 URL 목록을 가져와 주세요." : "");
   } else $("coverage").textContent = response?.error || "서버 실행 상태를 확인해 주세요.";
   return response;
@@ -36,7 +36,7 @@ async function refresh() {
 
 async function init() {
   const config = { ...DEFAULTS, ...await chrome.storage.local.get(Object.keys(DEFAULTS)) };
-  for (const key of ["enabled", "autoHide", "allowSolar"]) {
+  for (const key of ["enabled", "autoHide", "allowGLM"]) {
     $(key).checked = config[key];
     $(key).addEventListener("change", async () => { await chrome.storage.local.set({ [key]: $(key).checked }); setTimeout(refresh, 500); });
   }

@@ -11,7 +11,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 from .blocklist import Blocklist
 from .engine import Engine
-from .solar import SolarAgent
+from .glm import GLMAgent
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -36,14 +36,14 @@ def validate(payload):
             raise ValueError('URL 형식이 올바르지 않습니다.')
         if 'account' in item and (not isinstance(item['account'], str) or len(item['account']) > 128):
             raise ValueError('계정 해시 형식이 올바르지 않습니다.')
-    if not isinstance(payload.get('allow_solar', False), bool):
-        raise ValueError('allow_solar 값은 boolean이어야 합니다.')
-    return session, comments, payload.get('allow_solar', False)
+    if not isinstance(payload.get('allow_glm', False), bool):
+        raise ValueError('allow_glm 값은 boolean이어야 합니다.')
+    return session, comments, payload.get('allow_glm', False)
 
 
 def handler_factory(engine, token, port, demo_data=False):
     class Handler(BaseHTTPRequestHandler):
-        server_version = 'CommentGuard/0.1'
+        server_version = 'CommentGuard/0.2'
 
         def log_message(self, *_):
             pass  # Do not log comment content or authentication headers.
@@ -85,8 +85,8 @@ def handler_factory(engine, token, port, demo_data=False):
                 return self.send(403, {'error': '허용되지 않은 출처입니다.'})
             path = urlsplit(self.path).path
             if path == '/api/health':
-                return self.send(200, {'ok': True, 'version': '0.1.0', 'blocklist_count': engine.blocklist.count,
-                    'demo_data': demo_data, 'solar_available': engine.solar.enabled, 'model': engine.solar.model})
+                return self.send(200, {'ok': True, 'version': '0.2.0', 'blocklist_count': engine.blocklist.count,
+                    'demo_data': demo_data, 'glm_available': engine.glm.enabled, 'model': engine.glm.model})
             files = {'/': ROOT/'demo/index.html', '/demo': ROOT/'demo/index.html',
                      '/demo/': ROOT/'demo/index.html', '/demo/demo.js': ROOT/'demo/demo.js',
                      '/demo/demo.css': ROOT/'demo/demo.css',
@@ -113,8 +113,8 @@ def handler_factory(engine, token, port, demo_data=False):
                     return self.send(413, {'error': '요청 크기를 초과했습니다.'})
                 self.connection.settimeout(10)
                 payload = json.loads(self.rfile.read(length))
-                session, comments, allow_solar = validate(payload)
-                result = engine.analyze(session, comments, allow_solar)
+                session, comments, allow_glm = validate(payload)
+                result = engine.analyze(session, comments, allow_glm)
                 return self.send(200, result)
             except (ValueError, UnicodeError, TimeoutError):
                 return self.send(400, {'error': '요청 형식이 올바르지 않습니다.'})
@@ -130,7 +130,7 @@ def main():
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--demo-data', action='store_true', help='예약된 .test URL 두 개를 시연 목록으로 사용')
     parser.add_argument('--blocklist', type=Path, help='UTF-8 URL 목록 또는 domain:도메인 목록')
-    parser.add_argument('--solar', action='store_true', help='UPSTAGE_API_KEY가 있을 때 Solar 기능 허용')
+    parser.add_argument('--glm', action='store_true', help='ZAI_API_KEY가 있을 때 GLM 기능 허용')
     parser.add_argument('--data-dir', type=Path, default=ROOT/'.local')
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535:
@@ -146,12 +146,12 @@ def main():
         blocklist.import_file(ROOT/'data/demo_blocklist.txt')
     if args.blocklist:
         print(f'Imported: {blocklist.import_file(args.blocklist)}')
-    engine = Engine(blocklist, SolarAgent(args.solar))
+    engine = Engine(blocklist, GLMAgent(args.glm))
     server = ThreadingHTTPServer(('127.0.0.1', args.port), handler_factory(engine, token, args.port, args.demo_data))
     server.daemon_threads = True
     print(f'Comment Guard: http://127.0.0.1:{args.port}/demo', flush=True)
     print(f'Connection token: {token}', flush=True)
-    print(f'Blocklist: {blocklist.count} | Solar: {engine.solar.enabled} | Demo: {args.demo_data}', flush=True)
+    print(f'Blocklist: {blocklist.count} | GLM: {engine.glm.enabled} | Demo: {args.demo_data}', flush=True)
     print('Paste the token into the extension popup. Stop: Ctrl+C', flush=True)
     try:
         server.serve_forever()
