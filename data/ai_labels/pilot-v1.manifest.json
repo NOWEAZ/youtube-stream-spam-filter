@@ -1,0 +1,49 @@
+{
+  "dataset_id": "ai-draft-pilot-v1",
+  "schema_version": 1,
+  "snapshot_date": "2026-11-18",
+  "data_file": "pilot-v1.jsonl",
+  "sha256": "ae327c5e8d0fad3bdb46760501a9c47d19af380176bf118b4622ee9484b910bb",
+  "records": 22,
+  "ai_label_counts": {
+    "normal": 17,
+    "spam": 5
+  },
+  "language_counts": {
+    "en": 20,
+    "ko": 2
+  },
+  "source_counts": {
+    "uci-youtube-spam-collection": 20,
+    "user-reported-comment": 2
+  },
+  "label_source": "ai",
+  "human_review_status": "unreviewed",
+  "eligible_for_gold_evaluation": false,
+  "models": [
+    "minimax-m3.1-flash"
+  ],
+  "prompt_versions": [
+    "draft-label-v1"
+  ],
+  "prompt_hashes": [
+    "89bca49975d6482da38921468fc0c40182724b15a6d768a42ebb2a70d069e9a6"
+  ],
+  "uci": {
+    "url": "https://archive.ics.uci.edu/dataset/380/youtube+spam+collection",
+    "citation": "Alberto, T. & Lochter, J. (2015). YouTube Spam Collection. UCI Machine Learning Repository. DOI: 10.24432/C58885.",
+    "license": "CC BY 4.0",
+    "license_url": "https://creativecommons.org/licenses/by/4.0/",
+    "modifications": "Sampled comments; HTML/contact and URL path/query masking; original labels discarded; AI draft labels added."
+  },
+  "user_examples": {
+    "records": 2,
+    "permission": "Project owner explicitly requested Git publication for team testing. No blanket license to the original comments is asserted."
+  },
+  "limitations": [
+    "22 pilot examples, not a representative evaluation set.",
+    "AI labels are unreviewed opinions, not human gold labels.",
+    "Masking can remove context. AI reasons are retained without editorial correction.",
+    "English-dominant older UCI comments and two selected Korean false-positive reports."
+  ]
+}

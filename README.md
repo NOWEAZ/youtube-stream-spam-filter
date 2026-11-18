@@ -6,7 +6,7 @@
 
 OpenCode가 데이터의 초벌 라벨(`normal`, `spam`, `uncertain`)을 작성하고, 사람의 정답과 분리해 관리하는 오프라인 도구를 추가했습니다. [AI_LABELING.md](AI_LABELING.md)에 출처·프롬프트·재시작·검토 방법을 정리했습니다.
 
-입력과 결과는 `.local/labels/`에만 저장합니다. 모든 AI 결과는 `label_source=ai`, `review_status=unreviewed`, `human_label=null`이며, 기존 확장 프로그램을 자동 학습시키거나 최종 평가 정답으로 사용하지 않습니다.
+실행 중 원본 입력·DB·기본 결과는 `.local/labels/`에 보관하고, 팀 공유용 마스킹 스냅샷은 [`data/ai_labels/`](data/ai_labels/README.md)에 Git으로 공유합니다. 모든 AI 결과는 `label_source=ai`, `review_status=unreviewed`, `human_label=null`이며, 기존 확장 프로그램을 자동 학습시키거나 최종 평가 정답으로 사용하지 않습니다.
 
 ```powershell
 python scripts/draft_label.py --input .local/labels/my-comments.jsonl
@@ -15,6 +15,15 @@ python scripts/label_report.py
 ```
 
 첫 명령은 API 호출 없이 입력 확인만 수행합니다. 결과를 보려면 `.local/labels/ai-drafts.html`을 브라우저에서 여세요. `--run`을 다시 실행하면 완료한 동일 모델·프롬프트의 댓글은 건너뜁니다.
+
+팀원은 API 키 없이 공유한 22건으로 동일한 비교 테스트를 실행할 수 있습니다.
+
+```powershell
+python scripts/check_ai_labels.py
+```
+
+공유 데이터의 AI 라벨은 사람 미검토 상태이며, 결과 보고서도 실제 정확도가 아닌 AI 라벨과의 일치도를 표시합니다.
+
 
 ## v0.4.1 — 정상 댓글 오탐 수정
 

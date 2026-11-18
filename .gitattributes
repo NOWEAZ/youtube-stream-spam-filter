@@ -1,0 +1,2 @@
+data/ai_labels/*.jsonl text eol=lf
+data/ai_labels/*.manifest.json text eol=lf
