@@ -17,6 +17,7 @@ from typing import Any
 
 from src import SEED
 from src.bloom_filter import TwoStageURLMatcher
+from src.llm_verifier import OpenCodeHoldVerifier
 from src.lsh_detector import LSHSpamDetector
 from src.normalizer import extract_promo_signals, extract_urls, normalize_text
 from src.sketches import DGIMCounter, FlajoletMartin
@@ -112,6 +113,7 @@ class SpamFilterPipeline:
         dgim_window_size: int = 1000,
         lsh_window_size: int = 500,
         seed: int = SEED,
+        llm_verifier: OpenCodeHoldVerifier | None = None,
     ) -> None:
         url_path = Path(sorted_urls_path) if sorted_urls_path else DEFAULT_SORTED_URLS_PATH
         self.url_matcher = TwoStageURLMatcher(
@@ -122,6 +124,7 @@ class SpamFilterPipeline:
         self.dgim_window_size = dgim_window_size
         self.lsh_window_size = lsh_window_size
         self.seed = seed
+        self.llm_verifier = llm_verifier if llm_verifier is not None else OpenCodeHoldVerifier()
         self._videos: dict[str, VideoStreamState] = {}
 
     def get_or_create_video_state(self, video_id: str) -> VideoStreamState:
@@ -228,6 +231,24 @@ class SpamFilterPipeline:
                 badge_type = "HOLD"
                 reasons.append(f"단일 홍보/링크 의심 신호 - 판단 보류 ({promo_signals[0]})")
 
+        llm_verified = False
+        if status == "HOLD" and self.llm_verifier.is_enabled:
+            llm_res = self.llm_verifier.verify_hold_comment(
+                text=norm_text,
+                hold_reason=" | ".join(reasons),
+                promo_signals=promo_signals,
+                best_jaccard=lsh_res.best_jaccard,
+            )
+            llm_verified = llm_res.get("used_llm") == "true"
+            if llm_res["verdict"] == "SPAM_SUSPECT":
+                status = "SPAM_SUSPECT"
+                badge_type = "PROMO_RULE"
+                reasons.append(f"OpenCode 3차 검증 스팸 확정 ({llm_res['reason']})")
+            elif llm_res["verdict"] == "NORMAL":
+                status = "NORMAL"
+                badge_type = "NONE"
+                reasons = [f"OpenCode 3차 검증 정상 완화 ({llm_res['reason']})"]
+
         if not reasons:
             reasons.append("정상 댓글")
 
@@ -262,6 +283,7 @@ class SpamFilterPipeline:
             "lsh_best_jaccard": lsh_res.best_jaccard,
             "lsh_candidate_count": len(lsh_res.candidate_ids),
             "promo_signals": promo_signals,
+            "llm_verified": llm_verified,
             "latency_ms": round(elapsed_ms, 3),
             "deduplicated": False,
         }
@@ -318,6 +340,7 @@ class SpamFilterPipeline:
             "seed": self.seed,
             "bloom_filter": self.url_matcher.stats(),
             "lsh_config": sample_lsh.stats(),
+            "llm_verifier": self.llm_verifier.stats(),
             "active_videos": {
                 vid: st.snapshot_stats() for vid, st in self._videos.items()
             },

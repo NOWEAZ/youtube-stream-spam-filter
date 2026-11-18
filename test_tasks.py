@@ -12,7 +12,7 @@ Verifies:
 from __future__ import annotations
 
 from collections import deque
-from http.server import ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 from pathlib import Path
 import random
@@ -24,6 +24,7 @@ from urllib.request import Request, urlopen
 from data.split_dataset import cluster_near_duplicates, load_raw_comments, split_clusters
 from src import SEED
 from src.bloom_filter import BloomFilter, DiskSortedURLStore, TwoStageURLMatcher
+from src.llm_verifier import OpenCodeHoldVerifier
 from src.lsh_detector import LSHSpamDetector, MinHash, exact_jaccard, extract_k_shingles
 from src.normalizer import extract_promo_signals, extract_urls, normalize_text, normalize_url
 from src.pipeline import SpamFilterPipeline
@@ -294,6 +295,87 @@ class TestSpamFilterAlgorithms(unittest.TestCase):
                         0.55,
                         f"Near-duplicate leakage detected between {name_a} and {name_b} (Jaccard={sim:.4f})",
                     )
+
+    def test_8_opencode_hold_verifier(self) -> None:
+        """⑧ Verify 3rd-stage OpenCode HOLD verifier triggers only on HOLD & falls back safely."""
+
+        class MockChatHandler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802
+                length = int(self.headers.get("Content-Length", "0"))
+                _ = self.rfile.read(length)
+                body = json.dumps(
+                    {
+                        "choices": [
+                            {
+                                "message": {
+                                    "content": json.dumps(
+                                        {"verdict": "SPAM_SUSPECT", "reason": "변형 대출 유도 스팸"},
+                                        ensure_ascii=False,
+                                    )
+                                }
+                            }
+                        ]
+                    },
+                    ensure_ascii=False,
+                ).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json; charset=utf-8")
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, format: str, *args: object) -> None:  # noqa: A002
+                return
+
+        mock_server = ThreadingHTTPServer(("127.0.0.1", 0), MockChatHandler)
+        mock_port = mock_server.server_address[1]
+        mock_thread = threading.Thread(target=mock_server.serve_forever, daemon=True)
+        mock_thread.start()
+
+        try:
+            verifier = OpenCodeHoldVerifier(
+                api_key="test_key",
+                api_url=f"http://127.0.0.1:{mock_port}/v1/chat/completions",
+                model="test-model",
+                timeout_sec=2.0,
+            )
+            pipeline = SpamFilterPipeline(llm_verifier=verifier, seed=SEED)
+
+            # Normal comment must NOT invoke LLM
+            r_norm = pipeline.analyze_comment("n1", "좋은 영상 감사합니다!", video_id="v_llm")
+            self.assertEqual(r_norm["status"], "NORMAL")
+            self.assertEqual(verifier.total_calls, 0)
+
+            # Borderline HOLD comment (single PROMO_FINANCE signal) MUST invoke LLM and upgrade
+            r_hold_spam = pipeline.analyze_comment(
+                "h1",
+                "당일 대출 상담 문의 바랍니다",
+                video_id="v_llm",
+            )
+            self.assertEqual(verifier.total_calls, 1)
+            self.assertEqual(r_hold_spam["status"], "SPAM_SUSPECT")
+            self.assertTrue(r_hold_spam["llm_verified"])
+            self.assertEqual(verifier.upgraded_to_spam, 1)
+        finally:
+            mock_server.shutdown()
+            mock_server.server_close()
+
+        # Fail-safe fallback when endpoint is unreachable (mock_port is now closed)
+        failing_verifier = OpenCodeHoldVerifier(
+            api_key="test_key",
+            api_url=f"http://127.0.0.1:{mock_port}/v1/chat/completions",
+            model="test-model",
+            timeout_sec=1.0,
+        )
+        fallback_pipeline = SpamFilterPipeline(llm_verifier=failing_verifier, seed=SEED)
+        r_fallback = fallback_pipeline.analyze_comment(
+            "h2",
+            "당일 대출 상담 문의 바랍니다",
+            video_id="v_llm_fail",
+        )
+        self.assertEqual(r_fallback["status"], "HOLD")
+        self.assertFalse(r_fallback["llm_verified"])
+        self.assertEqual(failing_verifier.fallback_holds, 1)
 
 
 if __name__ == "__main__":

@@ -6,9 +6,9 @@
     "python_set_memory_kb": 1428.01,
     "bloom_1pct_memory_kb": 11.7,
     "memory_reduction_pct": 99.18,
-    "python_set_2000_queries_ms": 0.261,
-    "two_stage_p50_latency_ms": 0.0124,
-    "two_stage_p95_latency_ms": 0.0205,
+    "python_set_2000_queries_ms": 0.186,
+    "two_stage_p50_latency_ms": 0.012,
+    "two_stage_p95_latency_ms": 0.024,
     "two_stage_final_fpr": 0.0,
     "url_lookup_fpr_curve": [
       {
@@ -57,8 +57,8 @@
     "ground_truth_similar_pairs": 3951,
     "lsh_recalled_similar_pairs": 3738,
     "lsh_recall": 0.9461,
-    "all_pairs_time_ms": 80.68,
-    "lsh_time_ms": 480.3
+    "all_pairs_time_ms": 68.96,
+    "lsh_time_ms": 423.22
   },
   "pipeline_classification": {
     "script": "benchmarks/run_benchmarks.py::benchmark_pipeline_classification",
@@ -75,8 +75,8 @@
     "f1_score": 1.0,
     "comment_classification_fpr": 0.0,
     "hold_rate": 0.025,
-    "pipeline_p50_latency_ms": 1.916,
-    "pipeline_p95_latency_ms": 3.858
+    "pipeline_p50_latency_ms": 1.486,
+    "pipeline_p95_latency_ms": 3.262
   },
   "stream_sketches": {
     "script": "benchmarks/run_benchmarks.py::benchmark_sketches",

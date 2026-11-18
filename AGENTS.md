@@ -6,8 +6,8 @@
 
 ## 1. 핵심 알고리즘 및 구현 제약
 
-1. **외부 LLM / Upstage Solar API 연동 절대 금지:**
-   * 본 프로젝트는 외부 LLM API에 의존하지 않으며, 오직 **빅데이터 스트림·유사도 알고리즘(`BloomFilter`, `Shingling`, `MinHash`, `LSH`, `DGIM`, `FlajoletMartin`)과 규칙 기반 신호 결합**만으로 동작해야 합니다.
+1. **선택적 3차 LLM 검증 허용 (`HOLD` 경계선 댓글 한정):**
+   * 1·2차 스트림 판별은 반드시 **빅데이터 스트림·유사도 알고리즘(`BloomFilter`, `Shingling`, `MinHash`, `LSH`, `DGIM`, `FlajoletMartin`)과 규칙 기반 신호 결합**으로 수행하며, 판단 보류(`HOLD`)로 분류된 댓글에 한해 **OpenCode API(`OPENCODE_API_KEY`) 기반 선택적 3차 검증**을 허용합니다.
 2. **핵심 알고리즘 직접 구현 (Black-box 패키지 금지):**
    * `src/` 하위의 핵심 알고리즘 모듈(`bloom_filter.py`, `lsh_detector.py`, `sketches.py`, `normalizer.py`, `pipeline.py`, `server.py`)은 반드시 **Python 3 표준 라이브러리(`hashlib`, `math`, `random`, `collections`, `bisect`, `http.server` 등)만으로 직접 구현**해야 합니다.
    * `pybloom`, `datasketch`, `mmh3`, `bitarray`, `scikit-learn` 등 알고리즘이 내장된 외부 서드파티 패키지 import를 금지합니다.

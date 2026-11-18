@@ -11,7 +11,7 @@
 
 이 저장소에서 작업하는 코딩 에이전트는 코드를 작성하거나 문서를 갱신하기 전에 반드시 아래 제약 사항을 준수해야 합니다.
 
-1. **외부 LLM / Upstage Solar 연동 금지:** 본 프로젝트는 외부 LLM API를 사용하지 않으며, **순수 빅데이터 스트림·유사도 알고리즘(Bloom Filter, MinHash, LSH, DGIM, Flajolet-Martin)과 규칙 기반 신호 결합**만으로 동작합니다.
+1. **선택적 3차 LLM 검증 허용 (`HOLD` 경계선 댓글 한정):** 1·2차 스트림 판별은 반드시 **빅데이터 스트림·유사도 알고리즘(Bloom Filter, MinHash, LSH, DGIM, Flajolet-Martin)과 규칙 기반 신호 결합**으로 수행하며, 판단 보류(`HOLD`)로 분류된 댓글에 한해 **OpenCode API(`OPENCODE_API_KEY`) 기반 선택적 3차 검증**을 허용합니다.
 2. **핵심 알고리즘 직접 구현 (Black-box 라이브러리 금지):** `BloomFilter`, `Shingling`, `MinHash`, `LSH`, `DGIM`, `FlajoletMartin`은 반드시 **파이썬 3 표준 라이브러리만으로 직접 구현**해야 합니다(`pybloom`, `datasketch` 등 알고리즘이 내장된 외부 패키지 import 절대 금지).
 3. **원본 데이터 보호 및 출처 기록:** `data/` 폴더 안의 원본 파일은 절대 수정하지 마십시오. 데이터 수집 시점, 라이선스, 정규화·중복 제거 후 실제 건수는 `data/SOURCE.md`에 기록하고 확인하지 못한 수치는 `(확인 필요)`로 표기합니다.
 4. **개인정보 및 윤리 준수:** 작성자 표시명(Display Name)만으로 계정을 식별하거나 불필요한 개인 식별 정보를 디스크에 저장하지 마십시오.
@@ -56,6 +56,7 @@ PC 크롬에서 유튜브 댓글을 읽는 사용자를 위해 스팸 의심 댓
    ├─► (Step B) k-Shingling → MinHash 서명 → LSH 밴딩 후보 추출
    │      └─► 후보 쌍의 실제 Jaccard 유사도 재계산 + 홍보/연락처 유도 규칙 신호 결합
    ├─► (Step C) 최종 판정 도출: [SPAM_SUSPECT | NORMAL | HOLD] + 판별 근거(Reason) 생성
+   │      └─► [HOLD 경계선일 때만] OPENCODE_API_KEY 설정 시 OpenCode API로 3차 정밀 검증 (실패/미설정 시 HOLD 유지)
    └─► (Step D) 스트림 스케치 갱신 (현재 영상 기준)
           ├─► DGIM: 스팸 의심(1) / 그 외(0) 비트 스트림 입력 → 최근 N개 관측 댓글 내 의심 수 추정
           └─► Flajolet-Martin: 의심 댓글 내 고유 URL 수 및 고유 계정 식별값(확보 시) 수 추정
