@@ -3,16 +3,38 @@
   const $ = id => document.getElementById(id);
   const listeners = [], storageListeners = [];
   const config = { enabled: true, autoHide: true, allowOpenCode: false, token: "" };
+  let personalLabels = [];
+  try { personalLabels = JSON.parse(localStorage.getItem("demoPersonalLabels") || "[]").filter(PersonalLabels.validRecord); } catch { /* Start an empty demonstration profile. */ }
+  const personalChanged = () => {
+    localStorage.setItem("demoPersonalLabels", JSON.stringify(personalLabels));
+    storageListeners.forEach(callback => callback({ personalLabels: { newValue: personalLabels } }, "local"));
+  };
   globalThis.chrome = {
     runtime: {
       onMessage: { addListener: callback => listeners.push(callback) },
       async sendMessage(message) {
+        if (message.type === "SET_PERSONAL_LABEL") {
+          try {
+            const item = await PersonalLabels.record(message.text, message.urls || [], message.label);
+            if (personalLabels.length >= PersonalLabels.MAX_LABELS && !personalLabels.some(row => row.key === item.key)) throw new Error("시연 라벨 한도입니다.");
+            personalLabels = [...personalLabels.filter(row => row.key !== item.key), item]; personalChanged();
+            return { ok: true };
+          } catch (error) { return { ok: false, error: error.message }; }
+        }
+        if (message.type === "DELETE_PERSONAL_LABEL") {
+          personalLabels = personalLabels.filter(row => row.key !== message.key); personalChanged(); return { ok: true };
+        }
         if (message.type !== "ANALYZE") return;
         if (!config.token) return { ok: false, error: "연결 토큰을 입력해 주세요." };
         try {
+          const index = await PersonalLabels.buildIndex(personalLabels);
+          const comments = await Promise.all(message.comments.map(async row => {
+            const match = PersonalLabels.match(await PersonalLabels.prepare(row.text, row.urls || []), index);
+            return { ...row, ...(match ? { personal_match: match } : {}) };
+          }));
           const response = await fetch("/api/analyze", { method: "POST",
             headers: { "Content-Type": "application/json", "X-YCSF-Token": config.token },
-            body: JSON.stringify({ session: message.session, comments: message.comments, allow_opencode: config.allowOpenCode }) });
+            body: JSON.stringify({ session: message.session, comments, allow_profile_images: false, allow_opencode: config.allowOpenCode }) });
           const data = await response.json();
           return response.ok ? { ok: true, data } : { ok: false, error: data.error };
         } catch { return { ok: false, error: "로컬 서버 연결이 끊겼습니다." }; }

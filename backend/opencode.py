@@ -53,7 +53,7 @@ class OpenCodeAgent:
         request = urllib.request.Request(self.endpoint,
             data=json.dumps(body).encode(), method='POST',
             headers={'Authorization': 'Bearer ' + self.key, 'Content-Type': 'application/json',
-                     'User-Agent': 'youtube-stream-spam-filter/0.5.0',
+                     'User-Agent': 'youtube-stream-spam-filter/0.6.0',
                      'x-opencode-session': session_id or 'ses_' + uuid.uuid4().hex})
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read(1_000_000))

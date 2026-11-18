@@ -36,13 +36,39 @@ async function refresh() {
   } catch { $("status").textContent = "유튜브 동영상을 열거나 확장 프로그램 설치 후 페이지를 새로고침해 주세요."; }
 }
 
+let personalData = [];
+function renderPersonal() {
+  const query = $("labelSearch").value.trim().toLowerCase();
+  $("personalList").replaceChildren();
+  for (const row of [...personalData].reverse().filter(row => !query || row.text.toLowerCase().includes(query)).slice(0, 20)) {
+    const item = document.createElement("div"); item.className = "personal-item";
+    const text = document.createElement("p"); text.textContent = `${row.label === "spam" ? "스팸" : "정상"} · ${row.text.slice(0, 100)}`;
+    const remove = document.createElement("button"); remove.textContent = "등록 취소"; remove.className = "btn";
+    remove.addEventListener("click", async () => {
+      remove.disabled = true;
+      const response = await chrome.runtime.sendMessage({ type: "DELETE_PERSONAL_LABEL", key: row.key });
+      if (response?.ok) await refreshPersonal();
+      else { $("personalMessage").textContent = response?.error || "취소하지 못했습니다."; remove.disabled = false; }
+    });
+    item.append(text, remove); $("personalList").append(item);
+  }
+}
+async function refreshPersonal() {
+  const response = await chrome.runtime.sendMessage({ type: "GET_PERSONAL_LABELS" });
+  if (!response?.ok) { $("personalMessage").textContent = response?.error || "개인 라벨을 읽지 못했습니다."; return; }
+  personalData = response.data.labels;
+  const { total, spam, normal, limit } = response.data.stats;
+  $("personalCount").textContent = total;
+  $("personalStats").textContent = `내 스팸 ${spam}개 · 내 정상 ${normal}개 / 최대 ${limit}개. 최근/검색 결과 20개 표시.`;
+  renderPersonal();
+}
+
 async function init() {
   const config = { ...DEFAULTS, ...await chrome.storage.local.get(Object.keys(DEFAULTS)) };
-  for (const key of ["enabled", "autoHide", "allowOpenCode", "allowProfileImages"]) {
+  for (const key of ["enabled", "autoHide", "allowOpenCode"]) {
     $(key).checked = config[key];
-    $(key).addEventListener("change", async () => { await chrome.storage.local.set({ [key]: $(key).checked }); $("allowProfileImages").disabled = !$("allowOpenCode").checked; setTimeout(refresh, 500); });
+    $(key).addEventListener("change", async () => { await chrome.storage.local.set({ [key]: $(key).checked }); setTimeout(refresh, 500); });
   }
-  $("allowProfileImages").disabled = !config.allowOpenCode;
   $("port").value = config.port; $("token").value = config.token;
   if (!config.token) $("settings").open = true;
   [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
@@ -64,6 +90,17 @@ async function init() {
     const { port = 8765 } = await chrome.storage.local.get("port");
     chrome.tabs.create({ url: `http://127.0.0.1:${Number(port)}/demo` });
   });
+  $("labelSearch").addEventListener("input", renderPersonal);
+  $("exportPersonal").addEventListener("click", async () => {
+    await refreshPersonal();
+    const content = personalData.map(row => JSON.stringify(row)).join("\n") + (personalData.length ? "\n" : "");
+    const url = URL.createObjectURL(new Blob([content], { type: "application/x-ndjson;charset=utf-8" }));
+    const link = document.createElement("a"); link.href = url; link.download = "my-youtube-labels.jsonl"; link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    $("personalMessage").textContent = `${personalData.length}개 개인 라벨을 내보냈습니다. 파일에는 등록한 댓글 본문이 포함됩니다.`;
+  });
+  chrome.storage.onChanged.addListener(changes => { if (changes.personalLabels) refreshPersonal().catch(() => {}); });
+  refreshPersonal().catch(() => { $("personalMessage").textContent = "확장 프로그램을 다시 로드해 주세요."; });
   health().catch(() => { $("connection").textContent = "연결 필요"; });
   refresh(); setInterval(refresh, 1500);
 }

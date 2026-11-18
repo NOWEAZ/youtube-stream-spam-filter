@@ -73,10 +73,27 @@ class Engine:
                 author_signals = name_signals(comment.get('author_name', ''))
                 if verdict == 'safe' and author_signals:
                     verdict, reason, source = 'review', '작성자 이름에 홍보·연락 유도 표현이 있습니다. 단독 근거로 접지 않습니다.', 'author_profile'
+                personal = comment.get('personal_match')
+                personal_applied = False
+                if personal:
+                    kind, label = personal['kind'], personal['label']
+                    if kind == 'exact':
+                        verdict = 'spam' if label == 'spam' else 'safe' if label == 'normal' else 'review'
+                        reason = '이 Chrome 프로필에서 직접 스팸으로 등록한 동일 댓글입니다.' if label == 'spam' else '이 Chrome 프로필에서 직접 정상으로 등록한 동일 댓글입니다.'
+                        if label == 'normal' and source == 'blocklist':
+                            reason += ' 단, 등록 악성 URL 일치는 남아 있으므로 주소 안전을 보장하지 않습니다.'
+                        source, independent, personal_applied = 'personal_exact', False, True
+                    elif kind == 'similar' and source != 'blocklist' and not (verdict == 'spam' and personal.get('reference_label') == 'spam'):
+                        verdict, reason = 'review', '내가 라벨링한 댓글과 매우 유사합니다. 새 문구는 직접 확인해 주세요.'
+                        source, independent, personal_applied = 'personal_similar', False, True
+                    elif kind == 'seed' and source not in ('blocklist', 'author_profile') and (label == 'spam' or verdict == 'safe'):
+                        verdict = 'spam' if label == 'spam' else 'safe'
+                        reason = '초기 기초 예시와 동일한 댓글입니다. 개인 라벨로 수정할 수 있습니다.'
+                        source, personal_applied = 'seed_label', True
                 image_url = avatar_url(comment.get('author_avatar', '')) if allow_opencode and allow_profile_images else None
                 base_verdict = verdict
                 agent = {'status': 'not_needed', 'calls': 0}
-                if verdict == 'review' or verdict == 'safe' and image_url:
+                if not personal_applied and (verdict == 'review' or verdict == 'safe' and image_url):
                     agent['status'] = 'disabled'
                     now = time.monotonic()
                     while self.agent_times and now - self.agent_times[0] > 60:
@@ -118,6 +135,7 @@ class Engine:
                           'similar_count': len(similar), 'agent': agent,
                           'language': language, 'score': rule['score'], 'signals': rule['signals'],
                           'author_signals': author_signals,
+                          'personal_match': personal if personal_applied else None,
                           'latency_ms': round((time.perf_counter() - start) * 1000, 2)}
                 session.results[key] = result
                 while len(session.results) > 3000:

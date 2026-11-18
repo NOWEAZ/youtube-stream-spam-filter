@@ -25,10 +25,13 @@
 <label class="toggle-row"><span>댓글 필터 사용</span><input id="enabled" type="checkbox" role="switch"></label>
 <label class="toggle-row"><span>스팸 의심 댓글 자동 접기</span><input id="autoHide" type="checkbox" role="switch"></label>
 <label class="toggle-row"><span>OpenCode 추가 검토</span><input id="allowOpenCode" type="checkbox" role="switch"></label>
-<label class="toggle-row"><span>프로필 이미지도 OpenCode로 검토</span><input id="allowProfileImages" type="checkbox" role="switch"></label>
-<p class="muted">이미지 검토는 기본 꺼짐입니다. 켜면 호출 한도 내에서 정상 댓글의 프로필도 표본 검토하며, 공개 썸네일이 OpenCode와 모델 제공자로 전송됩니다. 얼굴·외모로 판정하지 않습니다. 이름 원문은 로컬 서버 메모리에서만 검사하고 외부에는 홍보 신호만 보냅니다.</p>
+<p class="muted">이미지 자동 분석은 사용하지 않습니다. 개인 라벨은 이 Chrome 프로필에만 저장하며 다른 사용자에게 자동 공유하지 않습니다.</p>
 <p class="muted">켜면 판단 보류 댓글과 근거 일부가 OpenCode 및 선택한 모델 제공자로 전송됩니다. 변경 시 통계가 초기화됩니다.</p>
 </section>
+<details id="personalSettings"><summary>내 라벨 관리 · <span id="personalCount">0</span>개</summary>
+<p id="personalStats" class="muted"></p><label for="labelSearch">라벨 검색</label><input id="labelSearch" type="search" placeholder="등록한 댓글의 단어로 검색"><div id="personalList"></div>
+<button id="exportPersonal" class="btn">개인 데이터셋 내보내기 (JSONL)</button><p id="personalMessage" class="muted" role="status"></p>
+<p class="muted">직접 지정한 동일 댓글에 우선 적용합니다. 매우 유사한 문장은 검토 필요로 표시합니다. 기초 예시는 합성 4건이며 AI 라벨을 개인 정답으로 자동 등록하지 않습니다.</p></details>
 <details id="settings"><summary>서버 연결 설정</summary><label for="port">로컬 서버 포트</label><input id="port" type="number" min="1024" max="65535" value="8765"><label for="token">연결 토큰 (API 키와 다릅니다)</label><input id="token" type="password" autocomplete="off" placeholder="서버 터미널의 Connection token"><button id="save" class="primary">설정 저장 및 연결 확인</button><p id="settingsMessage" role="status"></p><p id="coverage" class="muted"></p></details>
 <div class="actions"><button id="rescan" class="btn">스트림 초기화</button><button id="demo" class="btn">시연 화면 열기 ↗</button></div>
 <p class="footnote">사용자의 화면에서만 접습니다. 삭제·신고하지 않습니다.<br>규칙 점수는 확률이 아니며, ‘근거 없음’은 안전 보장이 아닙니다.</p>

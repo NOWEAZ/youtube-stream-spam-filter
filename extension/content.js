@@ -5,7 +5,7 @@
   const defaults = { enabled: true, autoHide: true, allowOpenCode: false, allowProfileImages: false };
   let config = { ...defaults }, video = "", session = "", generation = 0;
   let nodeState = new WeakMap(), results = new Map(), pending = new Map();
-  let originals = new Set(), normal = new Set();
+  let originals = new Set();
   let scheduled = false, scanning = false, busy = false, retryTimer = null;
   let latencies = [];
   let stats = {}, lastError = "", lastLatency = 0;
@@ -24,7 +24,7 @@
   function reset() {
     generation++;
     session = crypto.randomUUID();
-    pending.clear(); results.clear(); originals.clear(); normal.clear();
+    pending.clear(); results.clear(); originals.clear();
     nodeState = new WeakMap(); stats = {}; latencies = []; lastError = "";
     clearTimeout(retryTimer); retryTimer = null;
     clearDecorations();
@@ -34,18 +34,20 @@
     if (!node.isConnected) return;
     node.querySelectorAll(":scope > .ycg-bar").forEach(el => el.remove());
     textNode.classList.remove("ycg-text-hidden");
-    if (!config.enabled || normal.has(id) || result.verdict === "safe") return;
+    if (!config.enabled) return;
     const bar = document.createElement("div");
     bar.className = "ycg-bar";
     bar.dataset.verdict = result.verdict;
     bar.setAttribute("role", "group");
     bar.setAttribute("aria-label", "댓글 가드 분석 결과");
     const title = document.createElement("strong");
-    title.textContent = result.verdict === "spam" ? "스팸 의심" : "검토 필요";
+    title.textContent = result.source === "personal_exact" ? (result.verdict === "spam" ? "내 스팸 라벨" : "내 정상 라벨") :
+      result.verdict === "spam" ? "스팸 의심" : result.verdict === "review" ? "검토 필요" : "개인 라벨";
     const reason = document.createElement("span");
     reason.className = "ycg-reason";
     reason.textContent = `${result.language === "en" ? "EN · " : result.language === "mixed" ? "KO+EN · " : ""}${result.reason}`;
-    bar.append(title, reason);
+    if (result.verdict !== "safe" || result.source === "personal_exact") bar.append(title, reason);
+    else bar.classList.add("ycg-personal-controls");
     if (result.verdict === "spam") {
       const toggle = document.createElement("button");
       toggle.type = "button";
@@ -65,11 +67,37 @@
       });
       update(); bar.append(toggle);
     }
-    const feedback = document.createElement("button");
-    feedback.type = "button"; feedback.textContent = "정상 댓글입니다";
-    feedback.title = "이 영상에서만 표시를 해제합니다. 모델을 학습시키거나 신고하지 않습니다.";
-    feedback.addEventListener("click", () => { normal.add(id); textNode.classList.remove("ycg-text-hidden"); bar.remove(); });
-    bar.append(feedback);
+    const payload = nodeState.get(node)?.payload || { text: textNode.textContent.trim().slice(0, 2000),
+      urls: [...textNode.querySelectorAll("a[href]")].map(a => a.href).filter(url => /^https?:/.test(url) && url.length <= 2048).slice(0, 20) };
+    for (const label of ["spam", "normal"]) {
+      const feedback = document.createElement("button");
+      feedback.type = "button"; feedback.textContent = label === "spam" ? "스팸입니다" : "정상입니다";
+      feedback.title = "이 Chrome 프로필의 개인 라벨로 저장합니다. 같은 댓글에 다음부터 적용하며 다른 사용자에게 공유하지 않습니다.";
+      feedback.addEventListener("click", async event => {
+        if (!event.isTrusted) return;
+        event.stopPropagation(); feedback.disabled = true;
+        try {
+          const response = await send({ type: "SET_PERSONAL_LABEL", text: payload.text, urls: payload.urls || [], label });
+          if (!response?.ok) throw new Error(response?.error || "개인 라벨을 저장하지 못했습니다.");
+          reset(); schedule();
+        } catch (error) { reason.textContent = error.message; if (!reason.parentNode) bar.append(reason); }
+        finally { feedback.disabled = false; }
+      });
+      bar.append(feedback);
+    }
+    if (result.personal_match?.kind === "exact") {
+      const undo = document.createElement("button"); undo.type = "button"; undo.textContent = "등록 취소";
+      undo.addEventListener("click", async event => {
+        if (!event.isTrusted) return;
+        event.stopPropagation(); undo.disabled = true;
+        try {
+          const response = await send({ type: "DELETE_PERSONAL_LABEL", key: result.personal_match.reference_id });
+          if (!response?.ok) throw new Error(response?.error || "취소하지 못했습니다.");
+          reset(); schedule();
+        } catch (error) { reason.textContent = error.message; undo.disabled = false; }
+      });
+      bar.append(undo);
+    }
     node.prepend(bar);
   }
 
@@ -98,18 +126,7 @@
         const authorNode = node.querySelector("#author-text");
         const author_name = (authorNode?.textContent || "").trim().slice(0, 200);
         const channel = authorNode?.getAttribute("href") || "";
-        const avatarNode = node.querySelector("#author-thumbnail img, #author-thumbnail yt-img-shadow img");
-        let author_avatar = "";
-        if (config.allowOpenCode && config.allowProfileImages) {
-          try {
-            const image = new URL(avatarNode?.currentSrc || avatarNode?.src || "");
-            if (image.protocol === "https:" && ["yt3.ggpht.com", "yt3.googleusercontent.com"].includes(image.hostname)
-                && !image.username && !image.password && (!image.port || image.port === "443") && image.href.length <= 2048) {
-              image.search = ""; image.hash = ""; author_avatar = image.href;
-            }
-          } catch { /* Missing/default/unrecognised thumbnails do not become spam signals. */ }
-        }
-        const fingerprint = `${text}\n${channel}\n${urls.join("\n")}\n${author_name}\n${author_avatar}`;
+        const fingerprint = `${text}\n${channel}\n${urls.join("\n")}\n${author_name}`;
         const previous = nodeState.get(node);
         if (previous?.fingerprint === fingerprint && previous.textNode === textNode) {
           const result = results.get(previous.id);
@@ -120,14 +137,14 @@
         }
         const permalink = node.querySelector("#published-time-text a[href]")?.href || "";
         const commentId = permalink ? new URL(permalink, location.href).searchParams.get("lc") : "";
-        const id = await digest(`${video}:${commentId || fingerprint}:${text}:${urls.join("\n")}:${author_name}:${author_avatar}`);
+        const id = await digest(`${video}:${commentId || fingerprint}:${text}:${urls.join("\n")}:${author_name}`);
         const account = channel ? await digest(`${session}:${channel}`) : "";
         if (epoch !== generation || !config.enabled || !node.isConnected) continue;
         const item = { node, textNode, id, fingerprint };
         if (results.has(id)) {
           render(node, textNode, id, results.get(id)); item.result = results.get(id);
         }
-        else if (pending.size < 300) pending.set(id, { ...item, payload: { id, text, urls, account, video, author_name, ...(author_avatar ? { author_avatar } : {}) } });
+        else if (pending.size < 300) pending.set(id, { ...item, payload: { id, text, urls, account, video, author_name } });
         else continue;
         nodeState.set(node, item);
       }
@@ -195,7 +212,7 @@
     for (const key of Object.keys(defaults)) {
       if (changes[key]) { config[key] = changes[key].newValue ?? defaults[key]; redraw = true; }
     }
-    restart = Boolean(changes.allowOpenCode || changes.allowProfileImages || changes.token || changes.port);
+    restart = Boolean(changes.allowOpenCode || changes.allowProfileImages || changes.personalLabels || changes.personalLabelsRevision || changes.token || changes.port);
     if (restart) reset();
     else if (redraw) {
       clearDecorations(); nodeState = new WeakMap();

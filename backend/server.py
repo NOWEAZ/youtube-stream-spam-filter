@@ -42,6 +42,17 @@ def validate(payload):
         for name, limit in [('author_name', 200), ('author_avatar', 2048)]:
             if name in item and (not isinstance(item[name], str) or len(item[name]) > limit):
                 raise ValueError('작성자 정보 형식이 올바르지 않습니다.')
+        personal = item.get('personal_match')
+        if personal is not None:
+            if (not isinstance(personal, dict) or personal.get('label') not in ('spam', 'normal', 'review')
+                    or personal.get('kind') not in ('exact', 'similar', 'seed')
+                    or not isinstance(personal.get('reference_id'), str)
+                    or not re.fullmatch(r'[a-f0-9]{64}', personal['reference_id'])):
+                raise ValueError('개인 라벨 형식이 올바르지 않습니다.')
+            if ((personal['kind'] in ('exact', 'seed') and personal['label'] not in ('spam', 'normal'))
+                    or personal['kind'] == 'similar' and (personal['label'] != 'review'
+                        or personal.get('reference_label') not in ('spam', 'normal'))):
+                raise ValueError('개인 라벨 종류가 올바르지 않습니다.')
     if not isinstance(payload.get('allow_opencode', False), bool):
         raise ValueError('allow_opencode 값은 boolean이어야 합니다.')
     if not isinstance(payload.get('allow_profile_images', False), bool):
@@ -51,7 +62,7 @@ def validate(payload):
 
 def handler_factory(engine, token, port, demo_data=False):
     class Handler(BaseHTTPRequestHandler):
-        server_version = 'CommentGuard/0.5'
+        server_version = 'CommentGuard/0.6'
 
         def log_message(self, *_):
             pass  # Do not log comment content or authentication headers.
@@ -93,14 +104,15 @@ def handler_factory(engine, token, port, demo_data=False):
                 return self.send(403, {'error': '허용되지 않은 출처입니다.'})
             path = urlsplit(self.path).path
             if path == '/api/health':
-                return self.send(200, {'ok': True, 'version': '0.5.0', 'blocklist_count': engine.blocklist.count,
+                return self.send(200, {'ok': True, 'version': '0.6.0', 'blocklist_count': engine.blocklist.count,
                     'demo_data': demo_data, 'opencode_available': engine.opencode.enabled,
                     'provider': engine.opencode.provider, 'model': engine.opencode.model})
             files = {'/': ROOT/'demo/index.html', '/demo': ROOT/'demo/index.html',
                      '/demo/': ROOT/'demo/index.html', '/demo/demo.js': ROOT/'demo/demo.js',
                      '/demo/demo.css': ROOT/'demo/demo.css',
                      '/assets/content.js': ROOT/'extension/content.js',
-                     '/assets/content.css': ROOT/'extension/content.css'}
+                     '/assets/content.css': ROOT/'extension/content.css',
+                     '/assets/personal.js': ROOT/'extension/personal.js'}
             file = files.get(path)
             if file and file.is_file():
                 mime = {'.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css'}[file.suffix]
@@ -123,7 +135,8 @@ def handler_factory(engine, token, port, demo_data=False):
                 self.connection.settimeout(10)
                 payload = json.loads(self.rfile.read(length))
                 session, comments, allow_opencode = validate(payload)
-                result = engine.analyze(session, comments, allow_opencode, payload.get('allow_profile_images', False))
+                # Personalisation mode never automatically downloads or sends profile images.
+                result = engine.analyze(session, comments, allow_opencode, False)
                 return self.send(200, result)
             except (ValueError, UnicodeError, TimeoutError):
                 return self.send(400, {'error': '요청 형식이 올바르지 않습니다.'})

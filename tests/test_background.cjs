@@ -9,12 +9,12 @@ function worker(overrides = {}, response = { ok: true }) {
   const requests = [];
   const config = { enabled: true, token: 'test-pairing-token-1234567890', port: 8765, allowOpenCode: false, ...overrides };
   const chrome = {
-    storage: { local: { get: async () => config } },
+    storage: { local: { get: async () => config, set: async values => Object.assign(config, values) } },
     runtime: { id: 'a'.repeat(32), getURL: x => `chrome-extension://${'a'.repeat(32)}/${x}`,
       onMessage: { addListener: fn => { listener = fn; } } }
   };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '../extension/background.js'), 'utf8'), {
-    chrome, URL, AbortSignal, fetch: async (url, options) => {
+    chrome, URL, AbortSignal, importScripts: () => {}, PersonalLabels: require('../extension/personal.js'), fetch: async (url, options) => {
       requests.push({ url, options });
       return { ok: true, json: async () => response };
     }
@@ -89,10 +89,55 @@ test('profile images require separate consent and are stripped when either switc
   }
 });
 
-test('profile image consent is sent only when both local switches are on', async () => {
+test('legacy image consent no longer enables automatic image requests', async () => {
   const instance = worker({ allowOpenCode: true, allowProfileImages: true });
   await instance.invoke({ ...message, comments: [{ ...message.comments[0], author_avatar: 'https://yt3.ggpht.com/profile-test' }] }, contentSender);
   const body = JSON.parse(instance.requests[0].options.body);
-  assert.equal(body.allow_profile_images, true);
-  assert.equal(body.comments[0].author_avatar, 'https://yt3.ggpht.com/profile-test');
+  assert.equal(body.allow_profile_images, false);
+  assert.equal(body.comments[0].author_avatar, undefined);
+});
+
+
+test('personal feedback is local, persisted, editable and separated between Chrome profiles', async () => {
+  const one = worker();
+  const two = worker();
+  const feedback = { type: 'SET_PERSONAL_LABEL', text: 'My personal example comment', urls: [], label: 'spam' };
+  assert.equal((await one.invoke(feedback, contentSender)).ok, true);
+  await one.invoke(message, contentSender);
+  const saved = await one.invoke({type:'GET_PERSONAL_LABELS'}, popupSender);
+  assert.equal(saved.data.labels.length, 1);
+  assert.equal(saved.data.labels[0].label_source, 'user');
+  assert.equal(saved.data.labels[0].label, 'spam');
+  assert.equal((await two.invoke({type:'GET_PERSONAL_LABELS'}, popupSender)).data.labels.length, 0);
+  await one.invoke({ ...message, comments:[{id:'personal',text:feedback.text}] }, contentSender);
+  assert.equal(JSON.parse(one.requests.at(-1).options.body).comments[0].personal_match.label, 'spam');
+  await one.invoke({...feedback,label:'normal'},contentSender);
+  assert.equal((await one.invoke({type:'GET_PERSONAL_LABELS'},popupSender)).data.labels.length,1);
+  await one.invoke({type:'DELETE_PERSONAL_LABEL',key:saved.data.labels[0].key},popupSender);
+  assert.equal((await one.invoke({type:'GET_PERSONAL_LABELS'},popupSender)).data.labels.length,0);
+});
+
+test('concurrent personal feedback does not lose rows or call any API', async () => {
+  const instance=worker();
+  const values=await Promise.all(['first example','second example'].map(text=>instance.invoke({type:'SET_PERSONAL_LABEL',text,label:'spam'},contentSender)));
+  assert.equal(values.every(value=>value.ok),true);
+  assert.equal((await instance.invoke({type:'GET_PERSONAL_LABELS'},popupSender)).data.labels.length,2);
+  assert.equal(instance.requests.length,0);
+  assert.equal(await instance.invoke({type:'GET_PERSONAL_LABELS'},contentSender),undefined);
+});
+
+test('caller cannot forge a personal override without a stored label', async () => {
+  const instance=worker();
+  await instance.invoke({...message,comments:[{...message.comments[0],personal_match:{label:'spam',kind:'exact'}}]},contentSender);
+  assert.equal(JSON.parse(instance.requests[0].options.body).comments[0].personal_match,undefined);
+});
+
+
+test('full personal dataset is not silently evicted', async () => {
+  const rows=Array.from({length:500},(_,index)=>({key:index.toString(16).padStart(64,'0'),text:`label ${index}`,label:'spam',url_keys:[]}));
+  const instance=worker({personalLabels:rows});
+  const result=await instance.invoke({type:'SET_PERSONAL_LABEL',text:'new row must not replace old labels',label:'spam'},contentSender);
+  assert.equal(result.ok,false);
+  assert.equal((await instance.invoke({type:'GET_PERSONAL_LABELS'},popupSender)).data.labels.length,500);
+  assert.equal(instance.requests.length,0);
 });

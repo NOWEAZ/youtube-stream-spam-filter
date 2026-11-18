@@ -72,3 +72,8 @@ python scripts/check_ai_labels.py
 ```
 
 별도 키·서버·추가 API 호출 없이 공유 스냅샷의 체크섬과 상태를 확인한 다음 규칙 판정과 비교합니다. `reports/ai-label-comparison.json`에는 서로 다른 판정과 근거를 기록합니다. AI 판정을 정답으로 이름을 바꿔 실제 정확도로 보고하지 않습니다. 공유본은 `.local`의 실행 DB와 독립된 버전 파일입니다.
+
+
+## 사용자 피드백과의 구분
+
+v0.6.0의 [개인 라벨](PERSONAL_LABELS.md)은 확장에서 사용자가 직접 눌러 확인한 개인 선호 데이터이며 `label_source=user`입니다. 이 문서의 OpenCode 초벌 라벨은 `label_source=ai`로 유지합니다. 개인 피드백을 AI 원본에 덮어쓰거나, 한 사용자의 라벨을 다른 사용자에게 자동 적용하지 않습니다.

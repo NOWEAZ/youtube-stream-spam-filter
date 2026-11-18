@@ -3,3 +3,5 @@
 .ycg-bar[data-verdict="review"] strong{background:rgba(138,180,248,.14);color:#215aa8;border-color:rgba(66,133,244,.4)}
 .ycg-reason{flex:1 1 200px}.ycg-bar button{appearance:none;background:transparent;color:inherit;border:1px solid #9aa0a6;border-radius:10px;padding:2px 8px;cursor:pointer;font:inherit;white-space:nowrap}.ycg-bar button:hover{background:rgba(154,160,166,.12)}.ycg-bar button:focus-visible{outline:2px solid #8ab4f8;outline-offset:3px}.ycg-text-hidden{display:none!important}
 html[dark] .ycg-bar{color:#9aa0a6}html[dark] .ycg-bar strong{background:rgba(217,48,37,.16);color:#ff6b6b}html[dark] .ycg-bar[data-verdict="review"] strong{background:rgba(138,180,248,.14);color:#8ab4f8}
+
+.ycg-personal-controls{justify-content:flex-end;font-size:11px!important;margin:2px 0!important;padding:0!important}.ycg-personal-controls:hover,.ycg-personal-controls:focus-within{opacity:1}.ycg-bar[data-verdict="safe"] strong{background:#e8f0fe;color:#215aa8;border-color:#8ab4f8}
