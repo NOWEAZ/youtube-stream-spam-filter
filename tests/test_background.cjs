@@ -76,3 +76,23 @@ test('worker rejects excessive batches and unknown messages', async () => {
   assert.equal(await instance.invoke({ type: 'FETCH_URL', url: 'https://evil.test' }, contentSender), undefined);
   assert.equal(instance.requests.length, 0);
 });
+
+
+test('profile images require separate consent and are stripped when either switch is off', async () => {
+  for (const config of [{ allowOpenCode: true }, { allowProfileImages: true }, {}]) {
+    const instance = worker(config);
+    await instance.invoke({ ...message, allow_profile_images: true, comments: [
+      { ...message.comments[0], author_avatar: 'https://yt3.ggpht.com/profile-test' }] }, contentSender);
+    const body = JSON.parse(instance.requests[0].options.body);
+    assert.equal(body.allow_profile_images, false);
+    assert.equal(body.comments[0].author_avatar, undefined);
+  }
+});
+
+test('profile image consent is sent only when both local switches are on', async () => {
+  const instance = worker({ allowOpenCode: true, allowProfileImages: true });
+  await instance.invoke({ ...message, comments: [{ ...message.comments[0], author_avatar: 'https://yt3.ggpht.com/profile-test' }] }, contentSender);
+  const body = JSON.parse(instance.requests[0].options.body);
+  assert.equal(body.allow_profile_images, true);
+  assert.equal(body.comments[0].author_avatar, 'https://yt3.ggpht.com/profile-test');
+});

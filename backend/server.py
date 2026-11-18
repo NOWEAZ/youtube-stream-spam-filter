@@ -39,14 +39,19 @@ def validate(payload):
             raise ValueError('video 값이 올바르지 않습니다.')
         if 'account' in item and (not isinstance(item['account'], str) or len(item['account']) > 128):
             raise ValueError('계정 해시 형식이 올바르지 않습니다.')
+        for name, limit in [('author_name', 200), ('author_avatar', 2048)]:
+            if name in item and (not isinstance(item[name], str) or len(item[name]) > limit):
+                raise ValueError('작성자 정보 형식이 올바르지 않습니다.')
     if not isinstance(payload.get('allow_opencode', False), bool):
         raise ValueError('allow_opencode 값은 boolean이어야 합니다.')
+    if not isinstance(payload.get('allow_profile_images', False), bool):
+        raise ValueError('allow_profile_images 값은 boolean이어야 합니다.')
     return session, comments, payload.get('allow_opencode', False)
 
 
 def handler_factory(engine, token, port, demo_data=False):
     class Handler(BaseHTTPRequestHandler):
-        server_version = 'CommentGuard/0.4'
+        server_version = 'CommentGuard/0.5'
 
         def log_message(self, *_):
             pass  # Do not log comment content or authentication headers.
@@ -88,7 +93,7 @@ def handler_factory(engine, token, port, demo_data=False):
                 return self.send(403, {'error': '허용되지 않은 출처입니다.'})
             path = urlsplit(self.path).path
             if path == '/api/health':
-                return self.send(200, {'ok': True, 'version': '0.4.1', 'blocklist_count': engine.blocklist.count,
+                return self.send(200, {'ok': True, 'version': '0.5.0', 'blocklist_count': engine.blocklist.count,
                     'demo_data': demo_data, 'opencode_available': engine.opencode.enabled,
                     'provider': engine.opencode.provider, 'model': engine.opencode.model})
             files = {'/': ROOT/'demo/index.html', '/demo': ROOT/'demo/index.html',
@@ -118,7 +123,7 @@ def handler_factory(engine, token, port, demo_data=False):
                 self.connection.settimeout(10)
                 payload = json.loads(self.rfile.read(length))
                 session, comments, allow_opencode = validate(payload)
-                result = engine.analyze(session, comments, allow_opencode)
+                result = engine.analyze(session, comments, allow_opencode, payload.get('allow_profile_images', False))
                 return self.send(200, result)
             except (ValueError, UnicodeError, TimeoutError):
                 return self.send(400, {'error': '요청 형식이 올바르지 않습니다.'})

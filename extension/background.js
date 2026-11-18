@@ -1,5 +1,5 @@
 /* Network requests belong in the MV3 worker, not YouTube's content origin. */
-const DEFAULTS = { enabled: true, autoHide: true, allowOpenCode: false, port: 8765, token: "" };
+const DEFAULTS = { enabled: true, autoHide: true, allowOpenCode: false, allowProfileImages: false, port: 8765, token: "" };
 
 async function settings() {
   return { ...DEFAULTS, ...await chrome.storage.local.get(Object.keys(DEFAULTS)) };
@@ -23,7 +23,10 @@ async function backend(path, body) {
   const response = await fetch(`http://127.0.0.1:${port}${path}`, {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json", "X-YCSF-Token": config.token } : {},
-    body: body ? JSON.stringify({ ...body, allow_opencode: Boolean(config.allowOpenCode) }) : undefined,
+    body: body ? JSON.stringify({ ...body, allow_opencode: Boolean(config.allowOpenCode),
+      allow_profile_images: config.allowOpenCode === true && config.allowProfileImages === true,
+      comments: body.comments.map(({ author_avatar, ...comment }) => ({ ...comment,
+        ...(config.allowOpenCode === true && config.allowProfileImages === true && author_avatar ? { author_avatar } : {}) })) }) : undefined,
     signal: AbortSignal.timeout(45000),
     cache: "no-store",
     credentials: "omit",

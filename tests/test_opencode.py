@@ -57,7 +57,7 @@ class OpenCodeTest(unittest.TestCase):
                 'https://opencode.ai/inference/go/openai/v1/chat/completions' for request in requests))
             self.assertEqual(requests[0].get_header('X-opencode-session'), requests[1].get_header('X-opencode-session'))
             self.assertTrue(requests[0].get_header('X-opencode-session').startswith('ses_'))
-            self.assertEqual(requests[0].get_header('User-agent'), 'youtube-stream-spam-filter/0.4.1')
+            self.assertEqual(requests[0].get_header('User-agent'), 'youtube-stream-spam-filter/0.5.0')
 
     def test_old_key_cannot_enable_new_provider_and_invalid_config_fails(self):
         with patch.dict(os.environ, {'ZAI_API_KEY': 'old-key'}, clear=True):

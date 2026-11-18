@@ -2,7 +2,7 @@
   "use strict";
   if (globalThis.__commentGuardLoaded) return;
   globalThis.__commentGuardLoaded = true;
-  const defaults = { enabled: true, autoHide: true, allowOpenCode: false };
+  const defaults = { enabled: true, autoHide: true, allowOpenCode: false, allowProfileImages: false };
   let config = { ...defaults }, video = "", session = "", generation = 0;
   let nodeState = new WeakMap(), results = new Map(), pending = new Map();
   let originals = new Set(), normal = new Set();
@@ -95,8 +95,21 @@
         const text = textNode?.textContent?.trim().slice(0, 2000);
         if (!text) continue;
         const urls = [...textNode.querySelectorAll("a[href]")].map(a => a.href).filter(url => /^https?:/.test(url) && url.length <= 2048).slice(0, 20);
-        const channel = node.querySelector("#author-text[href]")?.getAttribute("href") || "";
-        const fingerprint = `${text}\n${channel}\n${urls.join("\n")}`;
+        const authorNode = node.querySelector("#author-text");
+        const author_name = (authorNode?.textContent || "").trim().slice(0, 200);
+        const channel = authorNode?.getAttribute("href") || "";
+        const avatarNode = node.querySelector("#author-thumbnail img, #author-thumbnail yt-img-shadow img");
+        let author_avatar = "";
+        if (config.allowOpenCode && config.allowProfileImages) {
+          try {
+            const image = new URL(avatarNode?.currentSrc || avatarNode?.src || "");
+            if (image.protocol === "https:" && ["yt3.ggpht.com", "yt3.googleusercontent.com"].includes(image.hostname)
+                && !image.username && !image.password && (!image.port || image.port === "443") && image.href.length <= 2048) {
+              image.search = ""; image.hash = ""; author_avatar = image.href;
+            }
+          } catch { /* Missing/default/unrecognised thumbnails do not become spam signals. */ }
+        }
+        const fingerprint = `${text}\n${channel}\n${urls.join("\n")}\n${author_name}\n${author_avatar}`;
         const previous = nodeState.get(node);
         if (previous?.fingerprint === fingerprint && previous.textNode === textNode) {
           const result = results.get(previous.id);
@@ -107,14 +120,14 @@
         }
         const permalink = node.querySelector("#published-time-text a[href]")?.href || "";
         const commentId = permalink ? new URL(permalink, location.href).searchParams.get("lc") : "";
-        const id = await digest(`${video}:${commentId || fingerprint}:${text}:${urls.join("\n")}`);
+        const id = await digest(`${video}:${commentId || fingerprint}:${text}:${urls.join("\n")}:${author_name}:${author_avatar}`);
         const account = channel ? await digest(`${session}:${channel}`) : "";
         if (epoch !== generation || !config.enabled || !node.isConnected) continue;
         const item = { node, textNode, id, fingerprint };
         if (results.has(id)) {
           render(node, textNode, id, results.get(id)); item.result = results.get(id);
         }
-        else if (pending.size < 300) pending.set(id, { ...item, payload: { id, text, urls, account, video } });
+        else if (pending.size < 300) pending.set(id, { ...item, payload: { id, text, urls, account, video, author_name, ...(author_avatar ? { author_avatar } : {}) } });
         else continue;
         nodeState.set(node, item);
       }
@@ -182,7 +195,7 @@
     for (const key of Object.keys(defaults)) {
       if (changes[key]) { config[key] = changes[key].newValue ?? defaults[key]; redraw = true; }
     }
-    restart = Boolean(changes.allowOpenCode || changes.token || changes.port);
+    restart = Boolean(changes.allowOpenCode || changes.allowProfileImages || changes.token || changes.port);
     if (restart) reset();
     else if (redraw) {
       clearDecorations(); nodeState = new WeakMap();
@@ -197,7 +210,7 @@
         n.nodeType === Node.ELEMENT_NODE && (n.matches?.("#comments") || n.querySelector?.("#comments")));
     })) schedule();
   });
-  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
+  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ["src", "srcset", "href"] });
   document.addEventListener("yt-navigate-finish", schedule);
   window.addEventListener("popstate", schedule);
   chrome.storage.local.get(Object.keys(defaults)).then(saved => {

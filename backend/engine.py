@@ -5,6 +5,7 @@ from collections import OrderedDict, deque
 from .algorithms import DGIM, FlajoletMartin, MinHashLSH, extract_urls, shingles
 from .opencode import OpenCodeAgent
 from .rules import classify, language_of, relevant_urls
+from .profiles import avatar_url, name_signals
 
 
 def heuristic(text, urls, matches):
@@ -44,7 +45,7 @@ class Engine:
         self.lock = threading.RLock()
         self.agent_times = deque()
 
-    def analyze(self, session_id, comments, allow_opencode=False):
+    def analyze(self, session_id, comments, allow_opencode=False, allow_profile_images=False):
         with self.lock:
             session = self.sessions.setdefault(session_id, Session())
             self.sessions.move_to_end(session_id)
@@ -69,8 +70,13 @@ class Engine:
                 if any(item['matched'] for item in lookups):
                     verdict, reason, source = 'spam', '등록된 악성 URL 또는 도메인과 정확히 일치합니다.', 'blocklist'
                     independent = True
+                author_signals = name_signals(comment.get('author_name', ''))
+                if verdict == 'safe' and author_signals:
+                    verdict, reason, source = 'review', '작성자 이름에 홍보·연락 유도 표현이 있습니다. 단독 근거로 접지 않습니다.', 'author_profile'
+                image_url = avatar_url(comment.get('author_avatar', '')) if allow_opencode and allow_profile_images else None
+                base_verdict = verdict
                 agent = {'status': 'not_needed', 'calls': 0}
-                if verdict == 'review':
+                if verdict == 'review' or verdict == 'safe' and image_url:
                     agent['status'] = 'disabled'
                     now = time.monotonic()
                     while self.agent_times and now - self.agent_times[0] > 60:
@@ -80,9 +86,14 @@ class Engine:
                         if not agent_used and session.agent_calls <= 18 and len(self.agent_times) < 6:
                             agent_used = True
                             self.agent_times.append(now)
-                            decision, agent = self.opencode.review(text, urls, lookups, similar)
+                            context = {}
+                            if author_signals:
+                                context['author_signals'] = author_signals
+                            if image_url:
+                                context['profile_image_url'] = image_url
+                            decision, agent = self.opencode.review(text, urls, lookups, similar, **context)
                             session.agent_calls += agent['calls']
-                            if decision:
+                            if decision and not (base_verdict == 'safe' and decision['verdict'] == 'review'):
                                 verdict, reason, source = decision['verdict'], decision['reason'], 'opencode'
                                 # Model suspicion alone must not hide a borderline comment.
                                 if verdict == 'spam':
@@ -106,6 +117,7 @@ class Engine:
                           'url_matches': sum(item['matched'] for item in lookups),
                           'similar_count': len(similar), 'agent': agent,
                           'language': language, 'score': rule['score'], 'signals': rule['signals'],
+                          'author_signals': author_signals,
                           'latency_ms': round((time.perf_counter() - start) * 1000, 2)}
                 session.results[key] = result
                 while len(session.results) > 3000:

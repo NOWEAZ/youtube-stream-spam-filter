@@ -1,6 +1,6 @@
 const $ = id => document.getElementById(id);
 let activeTab;
-const DEFAULTS = { enabled: true, autoHide: true, allowOpenCode: false, port: 8765, token: "" };
+const DEFAULTS = { enabled: true, autoHide: true, allowOpenCode: false, allowProfileImages: false, port: 8765, token: "" };
 
 async function health() {
   const response = await chrome.runtime.sendMessage({ type: "HEALTH" });
@@ -38,10 +38,11 @@ async function refresh() {
 
 async function init() {
   const config = { ...DEFAULTS, ...await chrome.storage.local.get(Object.keys(DEFAULTS)) };
-  for (const key of ["enabled", "autoHide", "allowOpenCode"]) {
+  for (const key of ["enabled", "autoHide", "allowOpenCode", "allowProfileImages"]) {
     $(key).checked = config[key];
-    $(key).addEventListener("change", async () => { await chrome.storage.local.set({ [key]: $(key).checked }); setTimeout(refresh, 500); });
+    $(key).addEventListener("change", async () => { await chrome.storage.local.set({ [key]: $(key).checked }); $("allowProfileImages").disabled = !$("allowOpenCode").checked; setTimeout(refresh, 500); });
   }
+  $("allowProfileImages").disabled = !config.allowOpenCode;
   $("port").value = config.port; $("token").value = config.token;
   if (!config.token) $("settings").open = true;
   [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
