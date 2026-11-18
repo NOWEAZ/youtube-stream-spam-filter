@@ -29,7 +29,7 @@ class OpenCodeTest(unittest.TestCase):
         with patch.dict(os.environ, {'OPENCODE_API_KEY': 'test-only-key'}, clear=True):
             self.assertFalse(OpenCodeAgent(False).enabled)
             self.assertTrue(OpenCodeAgent(True).enabled)
-            self.assertEqual(OpenCodeAgent().model, 'kimi-k3')
+            self.assertEqual(OpenCodeAgent().model, 'minimax-m3.1-flash')
 
     def test_http_transport_uses_zen_endpoint_and_server_key(self):
         with patch.dict(os.environ, {'OPENCODE_API_KEY': 'test-only-key'}, clear=True):
@@ -57,13 +57,13 @@ class OpenCodeTest(unittest.TestCase):
                 'https://opencode.ai/inference/go/openai/v1/chat/completions' for request in requests))
             self.assertEqual(requests[0].get_header('X-opencode-session'), requests[1].get_header('X-opencode-session'))
             self.assertTrue(requests[0].get_header('X-opencode-session').startswith('ses_'))
-            self.assertEqual(requests[0].get_header('User-agent'), 'youtube-stream-spam-filter/0.3.0')
+            self.assertEqual(requests[0].get_header('User-agent'), 'youtube-stream-spam-filter/0.4.0')
 
     def test_old_key_cannot_enable_new_provider_and_invalid_config_fails(self):
         with patch.dict(os.environ, {'ZAI_API_KEY': 'old-key'}, clear=True):
             self.assertFalse(OpenCodeAgent(True).enabled)
         for values in ({'OPENCODE_PROVIDER': 'https://evil.test'},
-                       {'OPENCODE_MODEL': ''}, {'OPENCODE_MODEL': 'opencode/kimi-k3'}):
+                       {'OPENCODE_MODEL': ''}, {'OPENCODE_MODEL': 'opencode/minimax-m3.1-flash'}):
             with patch.dict(os.environ, values, clear=True), self.assertRaises(ValueError):
                 OpenCodeAgent(True)
 
@@ -71,7 +71,7 @@ class OpenCodeTest(unittest.TestCase):
         calls = []
         def transport(body, timeout):
             calls.append(copy.deepcopy(body))
-            self.assertLessEqual(timeout, 12)
+            self.assertLessEqual(timeout, 30)
             return tool_message() if len(calls) == 1 else final_message()
         agent = OpenCodeAgent(True, transport)
         result, trace = agent.review('자료는 프로필 링크를 보세요', [], [{'matched': False}], [])
@@ -132,6 +132,7 @@ class OpenCodeTest(unittest.TestCase):
                 self.assertEqual(after['results'][0]['source'], 'opencode')
                 self.assertEqual(after['stats']['agent_calls'], 2)
                 self.assertTrue(after['opencode_available'])
+                self.assertEqual(engine.sessions['on'].index.records['1']['verdict'], 'safe')
             finally:
                 blocklist.db.close()
 

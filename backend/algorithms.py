@@ -3,6 +3,7 @@ import hashlib
 import math
 import re
 import statistics
+from .rules import normalize_text
 from collections import OrderedDict, defaultdict
 from urllib.parse import parse_qs, urlsplit, urlunsplit
 
@@ -72,7 +73,7 @@ class BloomFilter:
 
 
 def shingles(text, k=3):
-    normalized = re.sub(r'\s+', ' ', text.casefold()).strip()[:1500]
+    normalized = normalize_text(text)[:1500]
     return {normalized[i:i + k] for i in range(max(0, len(normalized) - k + 1))}
 
 
@@ -157,20 +158,23 @@ class DGIM:
 
 
 class FlajoletMartin:
-    """Textbook maximum-tail estimates, mean per group then median across groups."""
-    def __init__(self, groups=5, per_group=8):
-        self.groups, self.per_group = groups, per_group
-        self.tails = [-1] * (groups * per_group)
+    """FM stochastic averaging (PCSA), ported from Chang's bounded bitmap sketch."""
+    def __init__(self, groups=5, per_group=8, buckets=64):
+        self.maps = [0] * buckets
 
     def add(self, value):
-        for salt in range(len(self.tails)):
-            hashed = hash64(value, salt)
-            tail = (hashed & -hashed).bit_length() - 1 if hashed else 64
-            self.tails[salt] = max(self.tails[salt], tail)
+        bucket = hash64(value, 42) % len(self.maps)
+        hashed = hash64(value, 43)
+        rank = min((hashed & -hashed).bit_length() - 1 if hashed else 63, 63)
+        self.maps[bucket] |= 1 << rank
 
     def estimate(self):
-        if self.tails[0] < 0:
+        empty = self.maps.count(0)
+        count = len(self.maps)
+        if empty == count:
             return 0
-        means = [sum(2 ** r for r in self.tails[i:i + self.per_group]) / self.per_group
-                 for i in range(0, len(self.tails), self.per_group)]
-        return round(statistics.median(means))
+        ranks = [((~value) & (value + 1)).bit_length() - 1 for value in self.maps]
+        raw = count / .77351 * 2 ** (sum(ranks) / count)
+        if empty and raw <= 2.5 * count:
+            return round(-count * math.log(empty / count))
+        return round(raw)

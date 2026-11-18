@@ -33,16 +33,16 @@ class OpenCodeAgent:
             raise ValueError('OPENCODE_PROVIDER는 zen 또는 go여야 합니다.')
         self.endpoint = ENDPOINTS[self.provider]
         self.enabled = bool(enabled and (self.key or transport))
-        self.model = os.environ.get('OPENCODE_MODEL', 'kimi-k3').strip()
+        self.model = os.environ.get('OPENCODE_MODEL', 'minimax-m3.1-flash').strip()
         if not self.model or len(self.model) > 120 or '/' in self.model:
-            raise ValueError('OPENCODE_MODEL에 접두사 없는 모델 ID를 지정해 주세요. 예: kimi-k3')
+            raise ValueError('OPENCODE_MODEL에 접두사 없는 모델 ID를 지정해 주세요. 예: minimax-m3.1-flash')
         self.transport = transport
 
     def _request(self, body, timeout, session_id=None):
         request = urllib.request.Request(self.endpoint,
             data=json.dumps(body).encode(), method='POST',
             headers={'Authorization': 'Bearer ' + self.key, 'Content-Type': 'application/json',
-                     'User-Agent': 'youtube-stream-spam-filter/0.3.0',
+                     'User-Agent': 'youtube-stream-spam-filter/0.4.0',
                      'x-opencode-session': session_id or 'ses_' + uuid.uuid4().hex})
         with urllib.request.urlopen(request, timeout=timeout) as response:
             return json.loads(response.read(1_000_000))
@@ -54,7 +54,7 @@ class OpenCodeAgent:
             'comment': text[:1500], 'urls': urls[:10]}, ensure_ascii=False)}]
         tools = [schema('lookup_current_urls', '현재 댓글 URL의 로컬 악성 목록 정확 조회 결과를 확인합니다.'),
                  schema('find_similar_comments', '현재 댓글과 비슷한 관측 댓글 및 판정 근거를 확인합니다.')]
-        deadline, calls = time.monotonic() + 12, 0
+        deadline, calls = time.monotonic() + 30, 0
         # One opaque conversation ID for both tool-calling turns; no YouTube identifiers.
         session_id = 'ses_' + uuid.uuid4().hex
         trace = []

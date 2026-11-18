@@ -12,6 +12,7 @@ from urllib.parse import urlsplit
 from .blocklist import Blocklist
 from .engine import Engine
 from .opencode import OpenCodeAgent
+from .config import load_env
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -34,6 +35,8 @@ def validate(payload):
         urls = item.get('urls', [])
         if not isinstance(urls, list) or len(urls) > 20 or any(not isinstance(u, str) or len(u) > 2048 for u in urls):
             raise ValueError('URL 형식이 올바르지 않습니다.')
+        if 'video' in item and (not isinstance(item['video'], str) or len(item['video']) > 100):
+            raise ValueError('video 값이 올바르지 않습니다.')
         if 'account' in item and (not isinstance(item['account'], str) or len(item['account']) > 128):
             raise ValueError('계정 해시 형식이 올바르지 않습니다.')
     if not isinstance(payload.get('allow_opencode', False), bool):
@@ -43,7 +46,7 @@ def validate(payload):
 
 def handler_factory(engine, token, port, demo_data=False):
     class Handler(BaseHTTPRequestHandler):
-        server_version = 'CommentGuard/0.3'
+        server_version = 'CommentGuard/0.4'
 
         def log_message(self, *_):
             pass  # Do not log comment content or authentication headers.
@@ -85,7 +88,7 @@ def handler_factory(engine, token, port, demo_data=False):
                 return self.send(403, {'error': '허용되지 않은 출처입니다.'})
             path = urlsplit(self.path).path
             if path == '/api/health':
-                return self.send(200, {'ok': True, 'version': '0.3.0', 'blocklist_count': engine.blocklist.count,
+                return self.send(200, {'ok': True, 'version': '0.4.0', 'blocklist_count': engine.blocklist.count,
                     'demo_data': demo_data, 'opencode_available': engine.opencode.enabled,
                     'provider': engine.opencode.provider, 'model': engine.opencode.model})
             files = {'/': ROOT/'demo/index.html', '/demo': ROOT/'demo/index.html',
@@ -127,6 +130,7 @@ def handler_factory(engine, token, port, demo_data=False):
 
 
 def main():
+    load_env(ROOT/'.env')
     parser = argparse.ArgumentParser(description='유튜브 댓글 필터 로컬 서버')
     parser.add_argument('--port', type=int, default=8765)
     parser.add_argument('--demo-data', action='store_true', help='예약된 .test URL 두 개를 시연 목록으로 사용')

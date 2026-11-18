@@ -49,7 +49,7 @@ def run(size):
         'bloom_query_ms': bloom_ms, 'set_query_ms': set_ms, 'set_nonmember_hits': exact_hits,
         'timing_note': 'Filter-only timing; SQLite exact confirmation and HTTP are excluded.'},
         'dgim': {'exact': sum(bits[-1000:]), 'estimate': dgim.estimate(), 'buckets': len(dgim.buckets)},
-        'fm': {'exact': 800, 'estimate': fm.estimate(), 'note': 'Textbook estimator can have large error.'},
+        'fm': {'exact': 800, 'estimate': fm.estimate(), 'note': 'FM PCSA with 64 bitmaps and small-cardinality correction; estimate, not exact.'},
         'lsh': {'documents': len(texts), 'brute_force_pairs': len(texts)*(len(texts)-1)//2,
                 'candidate_comparisons': index.comparisons, 'true_similar_pairs': len(true_pairs),
                 'found_similar_pairs': len(found & true_pairs),

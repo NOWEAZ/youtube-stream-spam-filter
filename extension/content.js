@@ -7,6 +7,7 @@
   let nodeState = new WeakMap(), results = new Map(), pending = new Map();
   let originals = new Set(), normal = new Set();
   let scheduled = false, scanning = false, busy = false, retryTimer = null;
+  let latencies = [];
   let stats = {}, lastError = "", lastLatency = 0;
 
   const supportedVideo = () => location.hostname === "127.0.0.1" ? "demo" :
@@ -24,7 +25,7 @@
     generation++;
     session = crypto.randomUUID();
     pending.clear(); results.clear(); originals.clear(); normal.clear();
-    nodeState = new WeakMap(); stats = {}; lastError = "";
+    nodeState = new WeakMap(); stats = {}; latencies = []; lastError = "";
     clearTimeout(retryTimer); retryTimer = null;
     clearDecorations();
   }
@@ -43,7 +44,7 @@
     title.textContent = result.verdict === "spam" ? "스팸 의심" : "검토 필요";
     const reason = document.createElement("span");
     reason.className = "ycg-reason";
-    reason.textContent = result.reason;
+    reason.textContent = `${result.language === "en" ? "EN · " : result.language === "mixed" ? "KO+EN · " : ""}${result.reason}`;
     bar.append(title, reason);
     if (result.verdict === "spam") {
       const toggle = document.createElement("button");
@@ -93,7 +94,7 @@
         const textNode = node.querySelector("#content-text");
         const text = textNode?.textContent?.trim().slice(0, 2000);
         if (!text) continue;
-        const urls = [...textNode.querySelectorAll("a[href]")].map(a => a.href).filter(url => /^https?:/.test(url)).slice(0, 20);
+        const urls = [...textNode.querySelectorAll("a[href]")].map(a => a.href).filter(url => /^https?:/.test(url) && url.length <= 2048).slice(0, 20);
         const channel = node.querySelector("#author-text[href]")?.getAttribute("href") || "";
         const fingerprint = `${text}\n${channel}\n${urls.join("\n")}`;
         const previous = nodeState.get(node);
@@ -113,7 +114,7 @@
         if (results.has(id)) {
           render(node, textNode, id, results.get(id)); item.result = results.get(id);
         }
-        else if (pending.size < 300) pending.set(id, { ...item, payload: { id, text, urls, account } });
+        else if (pending.size < 300) pending.set(id, { ...item, payload: { id, text, urls, account, video } });
         else continue;
         nodeState.set(node, item);
       }
@@ -130,11 +131,14 @@
     for (const [id, item] of pending) if (!item.node.isConnected) pending.delete(id);
     if (!batch.length) { busy = false; return; }
     try {
+      const started = performance.now();
       const response = await send({ type: "ANALYZE", session, comments: batch.map(item => item.payload) });
       if (epoch !== generation) return;
       if (!response?.ok) throw new Error(response?.error || "확장 프로그램을 다시 로드해 주세요.");
       const data = response.data;
       stats = data.stats; lastError = "";
+      latencies.push(performance.now() - started);
+      if (latencies.length > 200) latencies.shift();
       for (const result of data.results) {
         results.set(result.id, result); pending.delete(result.id);
         lastLatency = result.latency_ms;
@@ -162,7 +166,9 @@
 
   chrome.runtime.onMessage.addListener((message, _sender, respond) => {
     if (message?.type === "GET_STATUS") {
-      respond({ video, supported: Boolean(supportedVideo()), stats, lastError, lastLatency,
+      const sorted = [...latencies].sort((a, b) => a - b);
+      const percentile = p => sorted.length ? sorted[Math.ceil(sorted.length * p) - 1] : null;
+      respond({ latency: { p50: percentile(.5), p95: percentile(.95) }, video, supported: Boolean(supportedVideo()), stats, lastError, lastLatency,
                 queued: pending.size, enabled: config.enabled });
     }
     if (message?.type === "RESCAN") {

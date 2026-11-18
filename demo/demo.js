@@ -39,6 +39,9 @@
     ["투자 수익 인증! 프로필 링크 확인 후 텔레그램으로 문의하세요.", "샘플 계정 B"],
     ["관련 자료는 프로필 링크에서 확인할 수 있어요.", "샘플 계정 C"],
     ["노래 너무 좋아요. 매일 듣고 있습니다.", "음악을 좋아하는 사람"],
+    ["Guaranteed profit! Join our Telegram and make money today.", "English spam sample"],
+    ["Thanks for explaining this. I joined the class yesterday.", "English viewer"],
+    ["The related resources are in the link in my profile.", "English review sample"],
   ].forEach(args => addComment(...args));
   $("connect").addEventListener("click", () => {
     const token = $("demoToken").value.trim();

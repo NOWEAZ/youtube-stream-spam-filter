@@ -2,6 +2,24 @@
 
 빅데이터개론 기획서를 구현한 **크롬 확장 프로그램과 로컬 Python 분석 서버**입니다. PC 유튜브 일반 동영상의 로드된 댓글을 분석하고, 스팸 의심 근거·원문 보기·정상 표시 해제 기능을 제공합니다. 실제 댓글을 삭제하거나 신고하지 않습니다.
 
+## 팀 통합 v0.4.0
+
+세 팀원 브랜치의 장점을 하나의 실행 경로로 통합했습니다. [통합 내역](INTEGRATION.md)에 비교 결과와 선택 이유를 기록했습니다.
+
+- 재원: 어두운 카드형 팝업, 관측 스트림 통계와 지연 표시.
+- 창현: 한국어·영어 점수 규칙, 영어 단어 경계, 내부 링크 제외, 유사도 오판 전파 방지, FM의 PCSA 보정.
+- 승민: 인증된 로컬 서버, Bloom → SQLite 정확 조회, 읽기 전용 도구 기반 OpenCode 검토, 자동 테스트와 시연.
+
+한국어·영어·혼합 댓글을 자동 분류하며 별도의 언어 선택은 필요 없습니다. UI는 한국어를 기본으로 일부 영어 표기를 함께 제공합니다.
+
+이 컴퓨터에는 사용자가 제공한 키를 로컬 `.env`에 설정했습니다. 아래 명령으로 실행한 뒤, 확장 프로그램을 다시 로드하고 **OpenCode 추가 검토**를 켜세요.
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -DemoData -OpenCode
+```
+
+키는 공유하지 않으므로 다른 팀원은 `.env.example`을 `.env`로 복사해 각자의 키를 입력해야 합니다. 로컬 설정은 Go와 `minimax-m3.1-flash`입니다. 예시 기본값 `zen`은 종량제 크레딧이 필요하며, Go는 서비스의 허용 용도를 확인해야 합니다.
+
 ## 빠른 시작
 
 ### 1 서버 실행
@@ -84,7 +102,7 @@ OpenCode는 API 제공 서비스이며 모델 이름과는 구분됩니다. 기�
 ```powershell
 $env:OPENCODE_API_KEY = '발급받은 OpenCode Console API 키'
 $env:OPENCODE_PROVIDER = 'zen'
-$env:OPENCODE_MODEL = 'kimi-k3'
+$env:OPENCODE_MODEL = 'minimax-m3.1-flash'
 powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -DemoData -OpenCode
 ```
 
@@ -103,17 +121,17 @@ powershell -ExecutionPolicy Bypass -File .\start-server.ps1 -DemoData -OpenCode
 | `OPENCODE_API_KEY` | Console에서 발급받은 키 | 서버에만 저장 |
 | `OPENCODE_PROVIDER` | `zen` (기본) | 일반 종량제 Console API, `https://opencode.ai/inference/openai/v1/chat/completions` |
 | `OPENCODE_PROVIDER` | `go` | Go 구독 API, `https://opencode.ai/inference/go/openai/v1/chat/completions` |
-| `OPENCODE_MODEL` | `kimi-k3` (기본) | 계정에서 이용 가능한 도구 호출 지원 모델의 ID |
+| `OPENCODE_MODEL` | `minimax-m3.1-flash` (기본) | 계정에서 이용 가능한 도구 호출 지원 모델의 ID |
 
 모델 ID에는 `opencode/`, `opencode-go/` 접두사를 붙이지 않습니다. 예를 들어 `glm-5.3`도 OpenCode를 통해 지정할 수 있습니다. 모델 변경 시 서버를 재시작하세요. 무료 모델은 외부 클라이언트에서 403으로 거부될 수 있으므로 무료 사용을 가정하지 않습니다.
 
 **Go 선택 시:** `$env:OPENCODE_PROVIDER = 'go'`로 바꾸면 구독 API 주소를 사용합니다. 다만 [Go 공식 안내](https://opencode.ai/docs/console/go/#where-can-i-use-it)는 코딩 에이전트 요청을 대상으로 합니다. 이 댓글 분류 앱의 이용 가능 여부를 서비스 측에 확인하시고, 일반 댓글 분석에는 종량제 `zen` 설정을 사용하세요. Go 구독으로 이 앱의 사용을 보장하지 않습니다. 실제 클라이언트 이름과 검토 대화별 임의 세션 ID를 전송하며, 같은 도구 호출 대화의 두 요청은 같은 ID를 사용합니다.
 
-`.env.example`은 예시이며 자동으로 읽지 않습니다. 키를 확장 프로그램 파일이나 Git에 넣지 마세요. 추가 검토 후보의 댓글 본문 최대 1,500자, 추출 URL, 도구로 조회한 유사 댓글 일부가 OpenCode 및 선택한 모델 제공자로 전송됩니다. 작성자 표시명과 원래 계정 주소는 보내지 않지만 댓글 본문 자체에는 개인정보가 있을 수 있습니다.
+`.env.example`을 `.env`로 복사해 값을 입력하면 서버가 자동으로 읽습니다. 터미널 환경변수가 있으면 그 값을 우선합니다. `.env`는 Git과 배포 ZIP에서 제외됩니다. 키를 확장 프로그램 파일이나 Git에 넣지 마세요. 추가 검토 후보의 댓글 본문 최대 1,500자, 추출 URL, 도구로 조회한 유사 댓글 일부가 OpenCode 및 선택한 모델 제공자로 전송됩니다. 작성자 표시명과 원래 계정 주소는 보내지 않지만 댓글 본문 자체에는 개인정보가 있을 수 있습니다.
 
-에이전트는 최대 2회 API 요청, 첫 응답에서 최대 2개 읽기 전용 도구 호출, 총 12초의 요청 대기 예산을 사용합니다. 배치당 1개 후보, 서버 전체 분당 6개 후보, 영상 세션당 최대 20회 API 요청으로 제한합니다. 잘린 응답·키 오류·예산 초과·잘못된 JSON·도구 근거 없는 응답은 **검토 필요**로 유지합니다. 이미 정확 조회로 일치한 악성 URL을 AI가 정상으로 뒤집지 않습니다. 모델 전용 `thinking` 옵션은 보내지 않습니다. OpenCode 옵션 변경 시 새 세션으로 재분석합니다.
+에이전트는 최대 2회 API 요청, 첫 응답에서 최대 2개 읽기 전용 도구 호출, 총 30초의 요청 대기 예산을 사용합니다. 배치당 1개 후보, 서버 전체 분당 6개 후보, 영상 세션당 최대 20회 API 요청으로 제한합니다. 잘린 응답·키 오류·예산 초과·잘못된 JSON·도구 근거 없는 응답은 **검토 필요**로 유지합니다. 이미 정확 조회로 일치한 악성 URL을 AI가 정상으로 뒤집지 않습니다. 모델 전용 `thinking` 옵션은 보내지 않습니다. OpenCode 옵션 변경 시 새 세션으로 재분석합니다.
 
-키가 없는 환경에서는 모의 응답으로 요청 주소·인증·도구 호출·실패 처리를 검증하며, 실제 API 성공 여부와 모델 성능은 키 설정 후 확인해야 합니다.
+통합 시 OpenCode Go의 `minimax-m3.1-flash`로 한국어·영어 합성 댓글 각 1개를 실제 두 단계 도구 호출과 최종 JSON 판정까지 확인했습니다. 이는 분류 성능 측정이 아니며 모델별 지연과 API 오류는 발생할 수 있습니다.
 
 ## 테스트와 평가
 
@@ -127,7 +145,7 @@ python scripts/evaluate.py --csv data/evaluation.csv
 
 `reports/benchmark.json`에는 합성 데이터 여부, seed, Bloom Filter와 해시셋의 메모리·조회 시간·오탐률, LSH 후보 비교 횟수와 재현율, DGIM·FM 추정 오차를 기록합니다. Bloom Filter의 조회 시간이 해시셋보다 빠르다고 가정하지 않습니다. 기본 벤치마크는 필터 자체를 비교하며 SQLite 정확 조회·HTTP 지연은 포함하지 않습니다. 해시셋 메모리는 `getsizeof` 합계, Bloom 메모리는 비트 배열 크기이므로 전체 프로세스 RSS 비교는 별도로 수행해야 합니다.
 
-CSV 평가는 기본 규칙과 입력 순서에 따라 쌓이는 LSH 인덱스를 평가하며 블랙리스트와 OpenCode는 사용하지 않습니다. 검토 필요는 양성으로 세지 않습니다. UCI의 `CONTENT,CLASS` 파일을 그대로 넣을 수 없으며 `text,label`로 변환해야 합니다. 실제 데이터 최종 성능, 한국어 라벨 검증, 실제 OpenCode 적용 전후 비교, 전체 지연 분포는 데이터와 키를 확보한 후 별도로 측정해야 합니다. 동일·준중복 댓글이 참조·최종 평가에 섞이지 않도록 분리해 주세요.
+CSV 평가는 기본 규칙과 입력 순서에 따라 쌓이는 LSH 인덱스를 평가하며 블랙리스트와 OpenCode는 사용하지 않습니다. 검토 필요는 양성으로 세지 않습니다. UCI의 `CONTENT,CLASS` 파일을 그대로 넣을 수 없으며 `text,label`로 변환해야 합니다. 실제 데이터 최종 성능, 한국어·영어 라벨 검증, OpenCode 적용 전후 성능 비교, 전체 지연 분포는 데이터와 키를 확보한 후 별도로 측정해야 합니다. 동일·준중복 댓글이 참조·최종 평가에 섞이지 않도록 분리해 주세요.
 
 ## 범위와 알려진 제약
 

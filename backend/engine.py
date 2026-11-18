@@ -4,24 +4,12 @@ import time
 from collections import OrderedDict, deque
 from .algorithms import DGIM, FlajoletMartin, MinHashLSH, extract_urls, shingles
 from .opencode import OpenCodeAgent
+from .rules import classify, language_of, relevant_urls
 
 
 def heuristic(text, urls, matches):
-    compact = re.sub(r'\s+', '', text).casefold()
-    contact = bool(re.search(r'텔레그램|카카오톡|카톡|오픈채팅|telegram|whatsapp|t\.me/', compact))
-    finance = bool(re.search(r'고수익|수익보장|원금보장|투자|부업|수익인증|수익공개|돈벌|수익률|guaranteedprofit', compact))
-    action = bool(re.search(r'프로필|링크|연락|문의|입장|참여|클릭|profile|click|join', compact))
-    credential = bool(re.search(r'비밀번호|계정인증|지갑연결|password|verifyyouraccount', compact))
-    if any(m['verdict'] == 'spam' and m['similarity'] >= 0.72 for m in matches):
-        return 'spam', '이미 스팸 의심으로 판정한 댓글과 문구가 매우 유사합니다.'
-    if contact and finance and action:
-        return 'spam', '외부 연락처 유도와 투자·수익 홍보 표현이 함께 있습니다.'
-    if credential and urls and action:
-        return 'spam', '외부 링크와 계정·인증정보 입력 유도 표현이 함께 있습니다.'
-    profile_link = bool(re.search(r'프로필.*링크|profile.*link', compact))
-    if finance and action or contact and action or urls and action or profile_link:
-        return 'review', '홍보 또는 외부 이동을 유도하는 표현이 있어 추가 검토가 필요합니다.'
-    return 'safe', '현재 규칙에서 스팸 근거를 찾지 못했습니다. 안전을 보장하는 판정은 아닙니다.'
+    verdict, reason, _ = classify(text, urls, matches)
+    return verdict, reason
 
 
 class Session:
@@ -33,6 +21,7 @@ class Session:
         self.total = self.spam = self.review = self.agent_calls = 0
         self.account_observations = 0
         self.history = deque(maxlen=60)
+        self.languages = dict(ko=0, en=0, mixed=0, other=0)
         self.started = self.touched = time.monotonic()
 
     def stats(self):
@@ -42,7 +31,7 @@ class Session:
                 'recent_spam_estimate': round(self.dgim.estimate(), 1),
                 'unique_spam_urls_estimate': self.fm_urls.estimate(),
                 'unique_spam_accounts_estimate': self.fm_accounts.estimate() if self.account_observations else None,
-                'agent_calls': self.agent_calls, 'lsh_records': len(self.index.records),
+                'agent_calls': self.agent_calls, 'languages': dict(self.languages), 'lsh_records': len(self.index.records),
                 'lsh_comparisons': self.index.comparisons, 'history': list(self.history)}
 
 
@@ -70,14 +59,16 @@ class Engine:
                     continue
                 start = time.perf_counter()
                 text = comment['text'][:2000]
-                urls = extract_urls(text, comment.get('urls', []))
+                urls = relevant_urls(extract_urls(text, comment.get('urls', [])), comment.get('video', ''))
                 lookups = [{'url': u, **self.blocklist.lookup(u)} for u in urls]
                 elements = shingles(text)
                 similar, signature = session.index.query(elements)
-                verdict, reason = heuristic(text, urls, similar)
+                verdict, reason, rule = classify(text, urls, similar)
+                independent = rule['score'] >= 3
                 source = 'rules'
                 if any(item['matched'] for item in lookups):
                     verdict, reason, source = 'spam', '등록된 악성 URL 또는 도메인과 정확히 일치합니다.', 'blocklist'
+                    independent = True
                 agent = {'status': 'not_needed', 'calls': 0}
                 if verdict == 'review':
                     agent['status'] = 'disabled'
@@ -93,7 +84,9 @@ class Engine:
                             session.agent_calls += agent['calls']
                             if decision:
                                 verdict, reason, source = decision['verdict'], decision['reason'], 'opencode'
-                session.index.add(key, elements, signature, text, verdict)
+                session.index.add(key, elements, signature, text, 'spam' if independent else 'safe')
+                language = language_of(text)
+                session.languages[language] += 1
                 session.total += 1
                 session.spam += verdict == 'spam'
                 session.review += verdict == 'review'
@@ -108,6 +101,7 @@ class Engine:
                 result = {'id': key, 'verdict': verdict, 'reason': reason, 'source': source,
                           'url_matches': sum(item['matched'] for item in lookups),
                           'similar_count': len(similar), 'agent': agent,
+                          'language': language, 'score': rule['score'], 'signals': rule['signals'],
                           'latency_ms': round((time.perf_counter() - start) * 1000, 2)}
                 session.results[key] = result
                 while len(session.results) > 3000:

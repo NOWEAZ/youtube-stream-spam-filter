@@ -5,10 +5,10 @@ const DEFAULTS = { enabled: true, autoHide: true, allowOpenCode: false, port: 87
 async function health() {
   const response = await chrome.runtime.sendMessage({ type: "HEALTH" });
   $("connection").textContent = response?.ok ? "서버 연결됨" : "연결 필요";
-  $("connection").className = `pill ${response?.ok ? "online" : "offline"}`;
+  $("connection").className = `status-pill ${response?.ok ? "online" : "offline"}`;
   if (response?.ok) {
     const data = response.data;
-    $("coverage").textContent = `${data.demo_data ? "시연 목록 · " : ""}악성 URL 목록 ${data.blocklist_count.toLocaleString()}건 · OpenCode ${data.opencode_available ? "사용 가능" : "미설정"}` +
+    $("coverage").textContent = `${data.provider || "zen"} / ${data.model || ""} · ${data.demo_data ? "시연 목록 · " : ""}악성 URL 목록 ${data.blocklist_count.toLocaleString()}건 · OpenCode ${data.opencode_available ? "사용 가능" : "미설정"}` +
       (data.demo_data ? ". 시연 목록은 실제 위협을 탐지하지 않습니다." : !data.blocklist_count ? ". 악성 URL 목록을 가져와 주세요." : "");
   } else $("coverage").textContent = response?.error || "서버 실행 상태를 확인해 주세요.";
   return response;
@@ -21,6 +21,8 @@ async function refresh() {
     if (!info?.supported) { $("status").textContent = "PC 유튜브의 일반 동영상에서 사용할 수 있습니다."; return; }
     const stats = info.stats || {};
     for (const key of ["total", "spam", "review", "safe", "window"]) $(key).textContent = (stats[key] || 0).toLocaleString();
+    for (const key of ["ko", "en", "mixed", "other"]) $(`lang-${key}`).textContent = stats.languages?.[key] || 0;
+    for (const key of ["p50", "p95"]) $(key).textContent = info.latency?.[key] == null ? "—" : `${info.latency[key].toFixed(1)} ms`;
     $("estimate").textContent = `${stats.recent_spam_estimate || 0}개`;
     $("urls").textContent = `${stats.unique_spam_urls_estimate || 0}개`;
     $("accounts").textContent = stats.unique_spam_accounts_estimate == null ? "관측 없음" : `${stats.unique_spam_accounts_estimate}개`;

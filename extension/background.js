@@ -24,7 +24,7 @@ async function backend(path, body) {
     method: body ? "POST" : "GET",
     headers: body ? { "Content-Type": "application/json", "X-YCSF-Token": config.token } : {},
     body: body ? JSON.stringify({ ...body, allow_opencode: Boolean(config.allowOpenCode) }) : undefined,
-    signal: AbortSignal.timeout(24000),
+    signal: AbortSignal.timeout(45000),
     cache: "no-store",
     credentials: "omit",
   });

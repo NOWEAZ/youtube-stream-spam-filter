@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "댓글 가드 — 유튜브 스팸 필터",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Bloom Filter·LSH·OpenCode로 관측한 유튜브 댓글의 스팸 의심 근거를 확인하고 접습니다.",
   "permissions": ["storage", "activeTab"],
   "host_permissions": ["http://127.0.0.1/*"],
