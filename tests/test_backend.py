@@ -111,6 +111,8 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(result['results'][0]['verdict'], 'review')
         self.assertEqual(result['results'][0]['agent']['status'], 'disabled')
         result = self.analyze('투자 수익인증 프로필 링크 텔레그램 문의하세요', '2')
+        self.assertEqual(result['results'][0]['verdict'], 'review')
+        result = self.analyze('원금 보장! 텔레그램 문의하세요', '3')
         self.assertEqual(result['results'][0]['verdict'], 'spam')
 
     def test_opencode_executes_only_allowlisted_tools(self):

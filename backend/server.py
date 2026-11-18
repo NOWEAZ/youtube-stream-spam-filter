@@ -88,7 +88,7 @@ def handler_factory(engine, token, port, demo_data=False):
                 return self.send(403, {'error': '허용되지 않은 출처입니다.'})
             path = urlsplit(self.path).path
             if path == '/api/health':
-                return self.send(200, {'ok': True, 'version': '0.4.0', 'blocklist_count': engine.blocklist.count,
+                return self.send(200, {'ok': True, 'version': '0.4.1', 'blocklist_count': engine.blocklist.count,
                     'demo_data': demo_data, 'opencode_available': engine.opencode.enabled,
                     'provider': engine.opencode.provider, 'model': engine.opencode.model})
             files = {'/': ROOT/'demo/index.html', '/demo': ROOT/'demo/index.html',

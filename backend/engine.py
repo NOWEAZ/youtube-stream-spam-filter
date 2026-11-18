@@ -64,7 +64,7 @@ class Engine:
                 elements = shingles(text)
                 similar, signature = session.index.query(elements)
                 verdict, reason, rule = classify(text, urls, similar)
-                independent = rule['score'] >= 3
+                independent = rule['strong_evidence']
                 source = 'rules'
                 if any(item['matched'] for item in lookups):
                     verdict, reason, source = 'spam', '등록된 악성 URL 또는 도메인과 정확히 일치합니다.', 'blocklist'
@@ -84,6 +84,10 @@ class Engine:
                             session.agent_calls += agent['calls']
                             if decision:
                                 verdict, reason, source = decision['verdict'], decision['reason'], 'opencode'
+                                # Model suspicion alone must not hide a borderline comment.
+                                if verdict == 'spam':
+                                    verdict = 'review'
+                                    reason = 'AI가 의심했지만 자동 접기 근거가 부족합니다. ' + reason
                 session.index.add(key, elements, signature, text, 'spam' if independent else 'safe')
                 language = language_of(text)
                 session.languages[language] += 1

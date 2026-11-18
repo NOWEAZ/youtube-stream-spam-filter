@@ -57,7 +57,7 @@ class OpenCodeTest(unittest.TestCase):
                 'https://opencode.ai/inference/go/openai/v1/chat/completions' for request in requests))
             self.assertEqual(requests[0].get_header('X-opencode-session'), requests[1].get_header('X-opencode-session'))
             self.assertTrue(requests[0].get_header('X-opencode-session').startswith('ses_'))
-            self.assertEqual(requests[0].get_header('User-agent'), 'youtube-stream-spam-filter/0.4.0')
+            self.assertEqual(requests[0].get_header('User-agent'), 'youtube-stream-spam-filter/0.4.1')
 
     def test_old_key_cannot_enable_new_provider_and_invalid_config_fails(self):
         with patch.dict(os.environ, {'ZAI_API_KEY': 'old-key'}, clear=True):
@@ -143,6 +143,30 @@ class OpenCodeTest(unittest.TestCase):
         self.assertTrue(validate({**payload, 'allow_opencode': True})[2])
         with self.assertRaises(ValueError):
             validate({**payload, 'allow_opencode': 'true'})
+
+    def test_ai_suspicion_alone_does_not_hide_or_seed_more_spam(self):
+        root = Path(__file__).resolve().parents[1]/'.local/test-temp'
+        root.mkdir(parents=True, exist_ok=True)
+        calls = []
+        def transport(*_):
+            calls.append(True)
+            return tool_message() if len(calls) % 2 else final_message('spam')
+        with tempfile.TemporaryDirectory(dir=root) as temp:
+            blocklist = Blocklist(Path(temp)/'empty.db')
+            try:
+                engine = Engine(blocklist, OpenCodeAgent(True, transport))
+                result = engine.analyze('false-positive', [{
+                    'id': '1', 'text': '성인사이트 홍보댓글도 보여서 열받는다는 점이에요'}], True)
+                self.assertEqual(result['results'][0]['verdict'], 'safe')
+                self.assertEqual(calls, [])
+                result = engine.analyze('false-positive', [{
+                    'id': '2', 'text': 'This is my new video editing setup.'}], True)
+                self.assertEqual(len(calls), 2)
+                self.assertEqual(result['results'][0]['source'], 'opencode')
+                self.assertEqual(result['results'][0]['verdict'], 'review')
+                self.assertEqual(engine.sessions['false-positive'].index.records['2']['verdict'], 'safe')
+            finally:
+                blocklist.db.close()
 
 
 if __name__ == '__main__':

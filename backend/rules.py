@@ -75,7 +75,35 @@ def score_rules(text, urls=()):
         combo += 1.0
     score = sum(weight for weight, _ in hits.values()) + combo
     reasons = [label for _, label in sorted(hits.values(), reverse=True)]
-    return {'score': round(score, 2), 'signals': list(hits), 'reasons': reasons}
+    # Scores surface candidates; they cannot alone justify hiding a comment.
+    solicitation = bool(re.search(
+        r'(?:문의|연락|입장|가입|참여|신청|클릭)(?:해?주세요|하세요|바랍니다|해요|하기|환영)|'
+        r'(?:보내|송금|입금)(?:주세요|세요)|'
+        r'\b(?:join (?:our|my|us|the)|contact (?:me|us)|(?:dm|message|text) me|'
+        r'click (?:here|the link)|sign up|claim your|send (?:me|us)|visit (?:my|our))\b', norm))
+    # Compact forms only for Korean. Never remove English word boundaries.
+    solicitation = solicitation or bool(re.search(
+        r'(?:문의|연락|입장|가입|참여|신청|클릭)(?:해?주세요|하세요|바랍니다|해요|하기|환영)', compact))
+    promise = bool(re.search(r'수익보장|원금보장|고정수익|하루\d+만원|월\d+만원', compact)
+                   or re.search(r'\b(?:guaranteed (?:profit|returns?)|get rich|earn \$?\d+)\b', norm))
+    destination = bool(external or {'contact', 'profile', 'messenger'} & hits.keys())
+    money_offer = promise and solicitation and destination
+    gambling_offer = ('gambling' in hits and solicitation and destination and bool(re.search(
+        r'꽁머니|가입보너스|무료포인트|입금|충전|\b(?:bonus|free credit|deposit)\b', norm)))
+    secret_request = bool(external and solicitation and re.search(
+        r'(?:인증번호|보안코드|시드구문|복구구문).{0,15}(?:보내|전송|입력)|'
+        r'\b(?:send|share|enter)\b.{0,35}\b(?:seed phrase|recovery phrase|verification code)\b', norm))
+    # Reporting/criticising an advert is not the same as placing that advert.
+    # A warning with an actual offer stays reviewable, rather than becoming a whitelist.
+    discussion = bool(re.search(
+        r'(?:광고|홍보|댓글|사이트|투자|사기).*(?:막을|막아|막는|막아요|막았습니다|차단|열받|조심|주의|싫|피해|비판|신고)|'
+        r'(?:조심|주의|싫|신고|차단).*(?:광고|홍보|댓글|사이트|사기)|'
+        r'\b(?:beware|watch out|warning|report|avoid)\b.{0,80}\b(?:scam|spam|ads?|guaranteed profit)\b|'
+        r'\b(?:scam|spam|ads?)\b.{0,50}\b(?:annoying|dangerous|report|avoid)\b', norm))
+    strong_evidence = bool(money_offer or gambling_offer or secret_request) and not discussion
+    return {'score': round(score, 2), 'signals': list(hits), 'reasons': reasons,
+            'strong_evidence': strong_evidence, 'discussion': discussion,
+            'solicitation': solicitation, 'destination': destination}
 
 
 def classify(text, urls, matches):
@@ -83,13 +111,15 @@ def classify(text, urls, matches):
     # Similarity cannot create its own future spam evidence. Short reactions are excluded.
     similar = len(normalize_text(text)) >= 20 and any(
         m['verdict'] == 'spam' and m['similarity'] >= .72 for m in matches)
-    if rules['score'] >= 3 or similar and rules['score'] >= .75:
+    if rules['strong_evidence']:
         verdict = 'spam'
-    elif rules['score'] >= 1.5 or urls and 'cta' in rules['signals']:
+    elif rules['discussion'] and not (rules['solicitation'] and rules['destination']):
+        verdict = 'safe'
+    elif rules['score'] >= 1.5 or similar and rules['score'] >= .75 or urls and 'cta' in rules['signals']:
         verdict = 'review'
     else:
         verdict = 'safe'
     reason = ' · '.join(rules['reasons'][:3]) if verdict != 'safe' else '현재 근거 없음 · 안전을 보장하는 판정은 아닙니다.'
-    if similar and verdict == 'spam':
-        reason = '독립 근거로 판정한 스팸과 유사 · ' + reason
+    if similar and verdict == 'review':
+        reason = '이전에 의심한 댓글과 유사하지만 자동 접기 근거는 부족합니다. ' + reason
     return verdict, reason, rules
