@@ -2,6 +2,20 @@
 
 빅데이터개론 기획서를 구현한 **크롬 확장 프로그램과 로컬 Python 분석 서버**입니다. PC 유튜브 일반 동영상의 로드된 댓글을 분석하고, 스팸 의심 근거·원문 보기·정상 표시 해제 기능을 제공합니다. 실제 댓글을 삭제하거나 신고하지 않습니다.
 
+## AI 생성 초벌 라벨링
+
+OpenCode가 데이터의 초벌 라벨(`normal`, `spam`, `uncertain`)을 작성하고, 사람의 정답과 분리해 관리하는 오프라인 도구를 추가했습니다. [AI_LABELING.md](AI_LABELING.md)에 출처·프롬프트·재시작·검토 방법을 정리했습니다.
+
+입력과 결과는 `.local/labels/`에만 저장합니다. 모든 AI 결과는 `label_source=ai`, `review_status=unreviewed`, `human_label=null`이며, 기존 확장 프로그램을 자동 학습시키거나 최종 평가 정답으로 사용하지 않습니다.
+
+```powershell
+python scripts/draft_label.py --input .local/labels/my-comments.jsonl
+python scripts/draft_label.py --run --max-requests 20 --requests-per-minute 6
+python scripts/label_report.py
+```
+
+첫 명령은 API 호출 없이 입력 확인만 수행합니다. 결과를 보려면 `.local/labels/ai-drafts.html`을 브라우저에서 여세요. `--run`을 다시 실행하면 완료한 동일 모델·프롬프트의 댓글은 건너뜁니다.
+
 ## v0.4.1 — 정상 댓글 오탐 수정
 
 ‘성인사이트 홍보 댓글 때문에 열받는다’, ‘카지노 드라마가 재미있다’ 같은 단어 언급만으로는 자동 접기하지 않습니다. 광고 비판·신고 문맥을 구분하고, 실제 수익 보장과 외부 연락 유도 등 구체적인 조합이 있을 때만 규칙으로 스팸 의심을 판정합니다. 단독 키워드·유사도·OpenCode의 의심 판정만 있는 경우 자동 접기 대신 검토 필요로 유지합니다. 등록 악성 URL의 정확 일치는 기존대로 처리합니다.
