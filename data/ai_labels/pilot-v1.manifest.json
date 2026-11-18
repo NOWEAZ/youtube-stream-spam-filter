@@ -3,7 +3,7 @@
   "schema_version": 1,
   "snapshot_date": "2026-11-18",
   "data_file": "pilot-v1.jsonl",
-  "sha256": "ae327c5e8d0fad3bdb46760501a9c47d19af380176bf118b4622ee9484b910bb",
+  "sha256": "aca862e191e354426171e01413b7fe0253ca0535d7b79fa5c2b9473f0dbbaf74",
   "records": 22,
   "ai_label_counts": {
     "normal": 17,
