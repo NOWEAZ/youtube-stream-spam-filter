@@ -2,7 +2,7 @@
 (() => {
   const $ = id => document.getElementById(id);
   const listeners = [], storageListeners = [];
-  const config = { enabled: true, autoHide: true, allowGLM: false, token: "" };
+  const config = { enabled: true, autoHide: true, allowOpenCode: false, token: "" };
   globalThis.chrome = {
     runtime: {
       onMessage: { addListener: callback => listeners.push(callback) },
@@ -12,7 +12,7 @@
         try {
           const response = await fetch("/api/analyze", { method: "POST",
             headers: { "Content-Type": "application/json", "X-YCSF-Token": config.token },
-            body: JSON.stringify({ session: message.session, comments: message.comments, allow_glm: config.allowGLM }) });
+            body: JSON.stringify({ session: message.session, comments: message.comments, allow_opencode: config.allowOpenCode }) });
           const data = await response.json();
           return response.ok ? { ok: true, data } : { ok: false, error: data.error };
         } catch { return { ok: false, error: "로컬 서버 연결이 끊겼습니다." }; }
@@ -46,7 +46,7 @@
     notify("token", token); $("connectionMessage").textContent = "연결을 요청했습니다. 아래 분석 결과를 확인해 주세요.";
   });
   $("autoHide").addEventListener("change", () => notify("autoHide", $("autoHide").checked));
-  $("allowGLM").addEventListener("change", () => notify("allowGLM", $("allowGLM").checked));
+  $("allowOpenCode").addEventListener("change", () => notify("allowOpenCode", $("allowOpenCode").checked));
   $("reset").addEventListener("click", () => listeners.forEach(callback => callback({ type: "RESCAN" }, {}, () => {})));
   $("add").addEventListener("click", () => {
     addComment("투자 수익 인증! 프로필 링크 확인 후 텔레그램으로 문의하세요!!", "샘플 계정 D");
@@ -58,17 +58,17 @@
   });
   fetch("/api/health").then(r => r.json()).then(data => {
     $("serverStatus").textContent = (data.demo_data ? "시연 목록 사용 중" : `목록 ${data.blocklist_count}건`) +
-      (data.glm_available ? " · GLM 사용 가능" : " · GLM 미설정");
+      (data.opencode_available ? " · OpenCode 사용 가능" : " · OpenCode 미설정");
   }).catch(() => { $("serverStatus").textContent = "서버 연결 필요"; });
   setInterval(() => {
     listeners.forEach(callback => callback({ type: "GET_STATUS" }, {}, info => {
       const stats = info.stats || {};
       for (const key of ["total", "spam", "review", "safe"]) $(key).textContent = stats[key] || 0;
       if (info.lastError) $("connectionMessage").textContent = info.lastError;
-      else if (stats.total) $("connectionMessage").textContent = config.allowGLM ?
-        "연결되었습니다. 서버에서 GLM이 활성화된 경우 검토 후보를 Z.ai로 전송합니다." :
-        "연결되었습니다. 댓글은 로컬에서 분석하며 GLM 전송은 꺼져 있습니다.";
-      $("streamStats").textContent = `DGIM 최근 ${stats.window || 0}개 중 의심 ${stats.recent_spam_estimate || 0}개 추정 · FM 고유 스팸 URL ${stats.unique_spam_urls_estimate || 0}개 추정 · GLM 호출 ${stats.agent_calls || 0}회`;
+      else if (stats.total) $("connectionMessage").textContent = config.allowOpenCode ?
+        "연결되었습니다. 서버에서 OpenCode가 활성화된 경우 검토 후보를 OpenCode 및 선택한 모델 제공자로 전송합니다." :
+        "연결되었습니다. 댓글은 로컬에서 분석하며 OpenCode 전송은 꺼져 있습니다.";
+      $("streamStats").textContent = `DGIM 최근 ${stats.window || 0}개 중 의심 ${stats.recent_spam_estimate || 0}개 추정 · FM 고유 스팸 URL ${stats.unique_spam_urls_estimate || 0}개 추정 · OpenCode 호출 ${stats.agent_calls || 0}회`;
     }));
   }, 600);
 })();

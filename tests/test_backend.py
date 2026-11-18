@@ -11,7 +11,7 @@ from backend.algorithms import BloomFilter, DGIM, FlajoletMartin, MinHashLSH, no
 from backend.blocklist import Blocklist
 from backend.engine import Engine
 from backend.server import handler_factory, validate
-from backend.glm import GLMAgent
+from backend.opencode import OpenCodeAgent
 
 
 class AlgorithmsTest(unittest.TestCase):
@@ -113,7 +113,7 @@ class EngineTest(unittest.TestCase):
         result = self.analyze('투자 수익인증 프로필 링크 텔레그램 문의하세요', '2')
         self.assertEqual(result['results'][0]['verdict'], 'spam')
 
-    def test_glm_executes_only_allowlisted_tools(self):
+    def test_opencode_executes_only_allowlisted_tools(self):
         calls = []
         def transport(body, timeout):
             calls.append(body)
@@ -121,7 +121,7 @@ class EngineTest(unittest.TestCase):
                 return {'choices': [{'message': {'content': None, 'tool_calls': [
                     {'id': 'call1', 'type': 'function', 'function': {'name': 'find_similar_comments', 'arguments': '{}'}}]}}]}
             return {'choices': [{'message': {'content': json.dumps({'verdict': 'review', 'reason': '근거가 부족합니다.'})}}]}
-        agent = GLMAgent(True, transport)
+        agent = OpenCodeAgent(True, transport)
         result, trace = agent.review('예시', [], [], [])
         self.assertEqual(result['verdict'], 'review')
         self.assertEqual(trace['calls'], 2)
@@ -129,9 +129,9 @@ class EngineTest(unittest.TestCase):
         self.assertEqual(calls[0]['tool_choice'], 'auto')
         self.assertNotIn('tool_choice', calls[1])
         self.assertNotIn('tools', calls[1])
-        bad = GLMAgent(True, lambda *_: {'choices': [{'message': {'content': '{"verdict":"spam","reason":"추측"}'}}]})
+        bad = OpenCodeAgent(True, lambda *_: {'choices': [{'message': {'content': '{"verdict":"spam","reason":"추측"}'}}]})
         self.assertIsNone(bad.review('예시', [], [], [])[0])
-        outage = GLMAgent(True, lambda *_: (_ for _ in ()).throw(TimeoutError()))
+        outage = OpenCodeAgent(True, lambda *_: (_ for _ in ()).throw(TimeoutError()))
         self.assertEqual(outage.review('예시', [], [], [])[1]['status'], 'unavailable')
 
     def test_validation_rejects_oversized_batches(self):
@@ -145,10 +145,11 @@ class EngineTest(unittest.TestCase):
         thread = threading.Thread(target=server.serve_forever, daemon=True); thread.start()
         url = f'http://127.0.0.1:{port}'
         payload = json.dumps({'session': 'http', 'comments': [{'id': '1', 'text': 'https://phishing.test/'}]}).encode()
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
         def request(token='', origin=None):
             headers = {'Content-Type': 'application/json', 'X-YCSF-Token': token}
             if origin: headers['Origin'] = origin
-            return urllib.request.urlopen(urllib.request.Request(url+'/api/analyze', data=payload, headers=headers), timeout=3)
+            return opener.open(urllib.request.Request(url+'/api/analyze', data=payload, headers=headers), timeout=3)
         try:
             with self.assertRaises(urllib.error.HTTPError) as exc: request()
             self.assertEqual(exc.exception.code, 401)

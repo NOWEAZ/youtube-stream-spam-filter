@@ -79,7 +79,7 @@ def evaluate_csv(path):
     recall = tp / (tp + fn) if tp + fn else 0
     return {'tp': tp, 'fp': fp, 'fn': fn, 'tn': tn, 'review': reviews,
             'precision': precision, 'recall': recall, 'f1': 2*precision*recall/(precision+recall) if precision+recall else 0,
-            'note': 'Empty blacklist, GLM disabled. Review counts as non-positive. Sequential CSV order; no claimed training accuracy.'}
+            'note': 'Empty blacklist, OpenCode disabled. Review counts as non-positive. Sequential CSV order; no claimed training accuracy.'}
 
 
 if __name__ == '__main__':

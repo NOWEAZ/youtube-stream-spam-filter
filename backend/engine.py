@@ -3,7 +3,7 @@ import threading
 import time
 from collections import OrderedDict, deque
 from .algorithms import DGIM, FlajoletMartin, MinHashLSH, extract_urls, shingles
-from .glm import GLMAgent
+from .opencode import OpenCodeAgent
 
 
 def heuristic(text, urls, matches):
@@ -47,15 +47,15 @@ class Session:
 
 
 class Engine:
-    def __init__(self, blocklist, glm=None, max_sessions=32):
+    def __init__(self, blocklist, opencode=None, max_sessions=32):
         self.blocklist = blocklist
-        self.glm = glm or GLMAgent()
+        self.opencode = opencode or OpenCodeAgent()
         self.sessions = OrderedDict()
         self.max_sessions = max_sessions
         self.lock = threading.RLock()
         self.agent_times = deque()
 
-    def analyze(self, session_id, comments, allow_glm=False):
+    def analyze(self, session_id, comments, allow_opencode=False):
         with self.lock:
             session = self.sessions.setdefault(session_id, Session())
             self.sessions.move_to_end(session_id)
@@ -84,15 +84,15 @@ class Engine:
                     now = time.monotonic()
                     while self.agent_times and now - self.agent_times[0] > 60:
                         self.agent_times.popleft()
-                    if allow_glm and self.glm.enabled:
+                    if allow_opencode and self.opencode.enabled:
                         agent['status'] = 'budget_limited'
                         if not agent_used and session.agent_calls <= 18 and len(self.agent_times) < 6:
                             agent_used = True
                             self.agent_times.append(now)
-                            decision, agent = self.glm.review(text, urls, lookups, similar)
+                            decision, agent = self.opencode.review(text, urls, lookups, similar)
                             session.agent_calls += agent['calls']
                             if decision:
-                                verdict, reason, source = decision['verdict'], decision['reason'], 'glm'
+                                verdict, reason, source = decision['verdict'], decision['reason'], 'opencode'
                 session.index.add(key, elements, signature, text, verdict)
                 session.total += 1
                 session.spam += verdict == 'spam'
@@ -114,4 +114,4 @@ class Engine:
                     session.results.popitem(last=False)
                 results.append(result)
             return {'results': results, 'stats': session.stats(), 'blocklist_count': self.blocklist.count,
-                    'glm_available': self.glm.enabled}
+                    'opencode_available': self.opencode.enabled}
